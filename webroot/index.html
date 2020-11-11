@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Traefik Admin Panel</title>
+    <link rel="stylesheet" href="static/css/vendor/materialize.min.css">
+    <link rel="stylesheet" href="static/css/traefik-admin.css">
+</head>
+<body>
+    <div id="app">
+      <div class="navbar-fixed">
+        <nav class="indigo darken-1">
+          <div class="nav-wrapper" style="line-height:56px;">
+            <a href="#" class="brand-logo">
+              <img src="static/img/traefik-logo.png" height="auto" width="50px">
+              Traefik Admin
+            </a>
+            
+            <ul id="nav-mobile" class="right">
+              <li class="hide-on-small-only">
+              <div class="input-field col s6">
+                <input placeholder="Filter configs" autocomplete="off" id="filterConfigs" type="text" v-on:keyup="applyFilter" v-model="filter_string">
+              </div>
+            </li>
+              <li><a data-target="editModal" class="btn modal-trigger" v-bind:class="{pulse: connections.length==0}">New</a></li>
+            </ul>
+          </div>
+        </nav>
+      </div>
+      <main>
+      <div class="">
+      <div id="emptyMsg" class="white-text" v-if="connections.length == 0">
+        <h5 class="center">looks empty here...</h5>
+        <h6 class="center">add a new config by clicking on the flashing button</h6>
+      </div>
+      <div class="row" style="display:none" id="connectionList">
+        <div class="proxycfg col s12 m4 l3" v-for="(con, index) in filter_view">
+            <div class="card">
+              <div class="card-content white-text">
+                <span class="card-title">{{con.name}}</span>
+                <p><a v-bind:href="'https://' + con.domain" target="_blank">{{con.domain}}</a></p>
+                <p class="green-text">{{con.backend}}</p>
+              </div>
+              <div class="card-action">
+                <a href="#" v-on:click="edit" v-bind:data-id="index">Edit</a>
+                <a href="#" class="red-text" v-on:click="remove" v-bind:data-id="index">Remove</a>
+              </div>
+            </div>
+        </div>
+      </div>
+
+    </div>
+    <div id="editModal" class="modal white-text">
+      <div class="modal-content blue-grey darken-4">
+        <h5>Proxy Connection Details</h5>
+        <div class="row">
+        <form class="col s12 m12">
+          <div class="row">
+            <div class="input-field col s12">
+                <input id="name" type="text" autocomplete="off" class="validate" v-model="editor.name" v-bind:class="{invalid: modal_errors.name != null || ''}">
+                <label for="name" v-bind:class="{active: editorMode=='Update'}">Config Name</label>
+                <span class="helper-text" v-bind:data-error="modal_errors.name"></span>
+            </div>
+            <div class="input-field col s12 m6">
+                <input id="domain" type="text" autocomplete="off" class="validate" v-model="editor.domain"  v-bind:class="{invalid: modal_errors.domain != null || ''}">
+                <label for="domain" v-bind:class="{active: editorMode=='Update'}">Domain</label>
+                <span class="helper-text" v-bind:data-error="modal_errors.domain"></span>
+            </div>
+            <div class="input-field col s12 m6">
+                <input id="backend" type="text" autocomplete="off" class="validate" v-model="editor.backend"  v-bind:class="{invalid: modal_errors.backend != null || ''}">
+                <label for="backend" v-bind:class="{active: editorMode=='Update'}">Backend</label>
+                <span class="helper-text" v-bind:data-error="modal_errors.backend"></span>
+            </div>
+          </div>
+          </form>
+        </div>
+        <div class="row">
+          <div class="col s12 m12 red-text" v-if="modal_errors.length">
+            <p>Errors:</p>
+            <ul>
+              <li v-for="err in modal_errors">{{err}}</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer blue-grey darken-3">
+        <a href="#!" class="modal-close waves-effect waves-green btn-flat white-text">Close</a>
+        <a href="#!" class="waves-effect waves-green btn-flat white-text" v-on:click="send('editModal')">{{editorMode}}</a>
+      </div>
+    </div>
+    </main>
+    <footer class="page-footer grey darken-4">
+      <div class="container">
+      <div class="right">
+      Made with <a href="https://materializecss.com/" target="_blank">Materialize</a>
+      </div>
+      </div>
+    </footer>
+
+  </div> <!-- end of app -->
+
+    <script src="static/js/materialize.min.js"></script>
+    <script src="static/js/vue.js"></script>
+    <script src="static/js/traefik-admin.js"></script>
+    <script>
+    </script>
+</body>
+</html>

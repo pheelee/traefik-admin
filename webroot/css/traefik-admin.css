@@ -1,0 +1,47 @@
+:root {
+  /* Colors */
+  --primary-bg-color: #4d4a4a;
+  --secondary-bg-color:#303030;
+  --text-color:#ffffff;
+  --text-secondary-color: grey;
+}
+
+body {
+  display: flex;
+  min-height: 100vh;
+  flex-direction: column;
+  background-color: var(--primary-bg-color);
+}
+
+main {
+  flex: 1 0 auto;
+}
+
+
+.page-footer {
+  position: fixed;
+  bottom: 0px;
+  width:100%;
+  display: flex;
+  align-items: center;
+  min-height: 50px;
+  padding-top: 0;
+  color: var(--text-secondary-color);
+}
+
+.card{
+  background-color: var(--secondary-bg-color);
+}
+
+nav .brand-logo {
+  left: 0pt !important;
+  transform: none !important;
+}
+
+input {
+  color: var(--text-color) !important;
+}
+
+.proxycfg {
+  max-width: 800px;
+}
