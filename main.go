@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"path"
 
+	"github.com/pheelee/traefik-admin/config"
 	"github.com/pheelee/traefik-admin/logger"
 )
 
@@ -29,6 +31,23 @@ func main() {
 	if cfg.ConfigPath == "" || cfg.WebRoot == "" {
 		flag.CommandLine.Usage()
 		os.Exit(1)
+	}
+
+	// Create sys configs
+	mw := config.Config{
+		HTTP: config.HTTP{
+			Middlewares: make(map[string]*config.Middleware),
+		},
+	}
+	mw.HTTP.Middlewares["sys-redirscheme"] = &config.Middleware{
+		RedirectScheme: config.RedirectScheme{
+			Scheme:    "https",
+			Permanent: true,
+		},
+	}
+
+	if err := mw.Write(path.Join(cfg.ConfigPath, "sys_middlewares.yaml")); err != nil {
+		panic(err)
 	}
 
 	r := SetupRoutes(cfg)

@@ -13,20 +13,23 @@ import (
 
 // Config holds a dynamic traefik config
 type Config struct {
-	HTTP http `yaml:"http"`
+	HTTP HTTP `yaml:"http"`
 }
 
-type http struct {
-	Routers  map[string]*Router  `yaml:"routers,omitempty"`
-	Services map[string]*Service `yaml:"services,omitempty"`
+// HTTP defines the http entry struct of traefik
+type HTTP struct {
+	Routers     map[string]*Router     `yaml:"routers,omitempty"`
+	Services    map[string]*Service    `yaml:"services,omitempty"`
+	Middlewares map[string]*Middleware `yaml:"middlewares,omitempty"`
 }
 
 // Router holds the config part for the router
 type Router struct {
 	Entrypoints []string         `yaml:"entryPoints,omitempty"`
 	Rule        string           `yaml:"rule"`
-	Service     string           `yaml:"service"`
-	TLS         *routerTLSConfig `yaml:"tls"`
+	Service     string           `yaml:"service,omitempty"`
+	TLS         *routerTLSConfig `yaml:"tls,omitempty"`
+	Middlewares []string         `yaml:"middlewares,omitempty"`
 }
 
 type routerTLSConfig struct {
@@ -48,9 +51,11 @@ type server struct {
 
 // UserInput hold the data submitted by the api request
 type UserInput struct {
-	Name    string `json:"name"`
-	Domain  string `json:"domain"`
-	Backend string `json:"backend"`
+	Name     string `json:"name"`
+	Domain   string `json:"domain"`
+	Backend  string `json:"backend"`
+	HTTPS    bool   `json:"https"`
+	ForceTLS bool   `json:"forcetls"`
 }
 
 //ValidationError provides information about invalid fields
@@ -68,9 +73,11 @@ var (
 
 func (c *Config) toUserInput(name string) UserInput {
 	return UserInput{
-		Name:    name,
-		Domain:  strings.TrimSuffix(strings.TrimPrefix(c.HTTP.Routers[name].Rule, "Host(`"), "`)"),
-		Backend: c.HTTP.Services[name].LoadBalancer.Servers[0].URL,
+		Name:     name,
+		Domain:   strings.TrimSuffix(strings.TrimPrefix(c.HTTP.Routers[name].Rule, "Host(`"), "`)"),
+		Backend:  c.HTTP.Services[name].LoadBalancer.Servers[0].URL,
+		HTTPS:    c.HTTP.Routers[name].TLS != nil,
+		ForceTLS: sliceContains(c.HTTP.Routers[name].Middlewares, "sys-redirscheme@file"),
 	}
 }
 
@@ -103,12 +110,12 @@ func (u *UserInput) Validate() (bool, ValidationError) {
 // New returns an initialized new config
 func New(service string, c UserInput) Config {
 	return Config{
-		HTTP: http{
+		HTTP: HTTP{
 			Routers: map[string]*Router{
 				service: {
-					Entrypoints: []string{"websecure"},
+					Entrypoints: []string{"web"},
 					Service:     service,
-					TLS:         &routerTLSConfig{CertResolver: "http01"},
+					TLS:         nil,
 					Rule:        fmt.Sprintf("Host(`%s`)", c.Domain),
 				},
 			},
@@ -164,6 +171,26 @@ func GetAllUserInput(cfgPath string) ([]UserInput, error) {
 // Create writes a new config
 func Create(cfgPath string, name string, c UserInput) error {
 	cfg := New(name, c)
+
+	// add or remove config options based on user inputs
+	switch c.HTTPS {
+	case true:
+		cfg.HTTP.Routers[name].TLS = &routerTLSConfig{CertResolver: "http01"}
+		cfg.HTTP.Routers[name].Entrypoints = []string{"websecure"}
+		cfg.HTTP.Routers[name+"-http"] = &Router{
+			Entrypoints: []string{"web"},
+			Rule:        cfg.HTTP.Routers[name].Rule,
+			Service: cfg.HTTP.Routers[name].Service,
+		}
+		//add redirect middleware
+		if c.ForceTLS {
+			cfg.HTTP.Routers[name+"-http"].Middlewares = append(cfg.HTTP.Routers[name+"-http"].Middlewares, "sys-redirscheme@file")
+		}
+	case false:
+		cfg.HTTP.Routers[name].TLS = nil
+		cfg.HTTP.Routers[name].Entrypoints = []string{"web"}
+	}
+
 	if b, err = yaml.Marshal(cfg); err != nil {
 		return err
 	}
@@ -185,9 +212,24 @@ func List(cfgPath string) ([]string, error) {
 	}
 
 	for _, f := range fi {
-		cfgs = append(cfgs, strings.TrimSuffix(f.Name(), path.Ext(f.Name())))
+		if !strings.HasPrefix(f.Name(), "sys_") {
+			cfgs = append(cfgs, strings.TrimSuffix(f.Name(), path.Ext(f.Name())))
+		}
 	}
 	return cfgs, nil
+}
+
+// Write serializes the config to file
+func (c *Config) Write(path string) error {
+	var (
+		err error
+		b   []byte
+	)
+	if b, err = yaml.Marshal(c); err != nil {
+		return err
+	}
+	err = ioutil.WriteFile(path, b, 0644)
+	return err
 }
 
 // Delete removes a config from the directory
@@ -199,4 +241,13 @@ func Delete(cfgPath string) error {
 func Exists(cfgPath string) bool {
 	_, err := os.Stat(cfgPath)
 	return err == nil
+}
+
+func sliceContains(sl []string, val string) bool {
+	for _, e := range sl {
+		if e == val {
+			return true
+		}
+	}
+	return false
 }

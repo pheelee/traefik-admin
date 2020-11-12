@@ -23,6 +23,8 @@ var app = new Vue({
         name: '',
         domain: '',
         backend: '',
+        https: true,
+        forcetls: true
       },
       editorMode: 'Create',
     },
