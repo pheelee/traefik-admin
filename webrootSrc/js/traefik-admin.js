@@ -11,6 +11,16 @@ function ajax(url, method, data, success, failure) {
   return xhr;
 }
 
+var defaults = {
+  editor: {
+    name: '',
+    domain: '',
+    backend: '',
+    https: true,
+    forcetls: true
+  }
+}
+
 var app = new Vue({
     el: '#app',
     data: {
@@ -19,13 +29,7 @@ var app = new Vue({
       filter_view:[],
       filter_string: '',
       modal_errors: {},
-      editor: {
-        name: '',
-        domain: '',
-        backend: '',
-        https: true,
-        forcetls: true
-      },
+      editor: Object.assign({},defaults.editor),
       editorMode: 'Create',
     },
     methods: {
@@ -72,11 +76,14 @@ var app = new Vue({
 
     M.Modal.init(document.querySelectorAll('.modal'), {
       onCloseEnd: function(el) {
-        app.editor = {}
+        app.editor = Object.assign({},defaults.editor)
         app.editorMode = 'Create'
         app.modal_errors = []
         el.querySelectorAll("input").forEach((i) => {
           i.classList.remove("valid")
+        })
+        el.querySelectorAll("label").forEach((i) => {
+          i.classList.remove("active")
         })
       }
     });
