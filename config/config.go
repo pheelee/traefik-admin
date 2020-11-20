@@ -71,13 +71,27 @@ var (
 	configFiles []string
 )
 
+func (h *HTTP) containsRouter(name string) bool {
+	_, ok := h.Routers[name]
+	return ok
+}
+
+func (r *Router) hasMiddleware(name string) bool {
+	for _, m := range r.Middlewares {
+		if m == name {
+			return true
+		}
+	}
+	return false
+}
+
 func (c *Config) toUserInput(name string) UserInput {
 	return UserInput{
 		Name:     name,
 		Domain:   strings.TrimSuffix(strings.TrimPrefix(c.HTTP.Routers[name].Rule, "Host(`"), "`)"),
 		Backend:  c.HTTP.Services[name].LoadBalancer.Servers[0].URL,
 		HTTPS:    c.HTTP.Routers[name].TLS != nil,
-		ForceTLS: sliceContains(c.HTTP.Routers[name].Middlewares, "sys-redirscheme@file"),
+		ForceTLS: c.HTTP.containsRouter(name+"-http") && c.HTTP.Routers[name+"-http"].hasMiddleware("sys-redirscheme@file"),
 	}
 }
 
@@ -180,7 +194,7 @@ func Create(cfgPath string, name string, c UserInput) error {
 		cfg.HTTP.Routers[name+"-http"] = &Router{
 			Entrypoints: []string{"web"},
 			Rule:        cfg.HTTP.Routers[name].Rule,
-			Service: cfg.HTTP.Routers[name].Service,
+			Service:     cfg.HTTP.Routers[name].Service,
 		}
 		//add redirect middleware
 		if c.ForceTLS {
@@ -241,13 +255,4 @@ func Delete(cfgPath string) error {
 func Exists(cfgPath string) bool {
 	_, err := os.Stat(cfgPath)
 	return err == nil
-}
-
-func sliceContains(sl []string, val string) bool {
-	for _, e := range sl {
-		if e == val {
-			return true
-		}
-	}
-	return false
 }
