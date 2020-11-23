@@ -58,7 +58,7 @@ func saveConfig(w http.ResponseWriter, r *http.Request) {
 		err     error
 		ret     bool
 		cfgopts config.UserInput
-		vErrs   config.ValidationError = config.ValidationError{Field: make(map[string]string)}
+		vErrs   config.ValidationError = config.ValidationError{Field: make(map[string]string), Generic: []string{}}
 	)
 
 	name := mux.Vars(r)["name"]
