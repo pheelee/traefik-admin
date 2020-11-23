@@ -1,9 +1,11 @@
 :root {
   /* Colors */
-  --primary-bg-color: #4d4a4a;
-  --secondary-bg-color:#303030;
+  --primary-bg-color: #3c4449;
+  --secondary-bg-color:#353537;
   --text-color:#ffffff;
   --text-secondary-color: grey;
+  --accent-color: #B0C753;
+  --alt-accent-color:#E1D8A2;
 }
 
 body {
@@ -16,7 +18,6 @@ body {
 main {
   flex: 1 0 auto;
 }
-
 
 .page-footer {
   position: fixed;
@@ -44,4 +45,43 @@ input {
 
 .proxycfg {
   max-width: 800px;
+}
+
+
+.modal-content {
+  background-color:var(--primary-bg-color);
+}
+
+.modal-content .note {
+  color: var(--text-secondary-color)
+}
+
+.modal-content .add-btn {
+  position: fixed;
+  right: 10px;
+  bottom: 66px
+}
+
+.modal-footer {
+  background-color:var(--secondary-bg-color) !important;
+}
+
+#headers .row, #headers .input-field {
+  margin-bottom: 0px;
+}
+
+.tabs, .tabs .tab a:focus, .tabs .tab a:focus.active {
+  background-color: var(--primary-bg-color);
+}
+
+.tabs .tab a:hover, .tabs .tab a.active {
+  color: var(--alt-accent-color);
+}
+
+.tabs .tab a {
+  color: var(--accent-color);
+}
+
+.tabs .indicator {
+  background-color: var(--alt-accent-color)
 }
