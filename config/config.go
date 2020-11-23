@@ -5,7 +5,6 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
-	"regexp"
 	"strings"
 
 	"gopkg.in/yaml.v2"
@@ -49,20 +48,6 @@ type server struct {
 	URL string `yaml:"url"`
 }
 
-// UserInput hold the data submitted by the api request
-type UserInput struct {
-	Name     string `json:"name"`
-	Domain   string `json:"domain"`
-	Backend  string `json:"backend"`
-	HTTPS    bool   `json:"https"`
-	ForceTLS bool   `json:"forcetls"`
-}
-
-//ValidationError provides information about invalid fields
-type ValidationError struct {
-	Field map[string]string
-}
-
 var (
 	fi          []os.FileInfo
 	err         error
@@ -86,39 +71,21 @@ func (r *Router) hasMiddleware(name string) bool {
 }
 
 func (c *Config) toUserInput(name string) UserInput {
-	return UserInput{
+	u := UserInput{
 		Name:     name,
 		Domain:   strings.TrimSuffix(strings.TrimPrefix(c.HTTP.Routers[name].Rule, "Host(`"), "`)"),
 		Backend:  c.HTTP.Services[name].LoadBalancer.Servers[0].URL,
 		HTTPS:    c.HTTP.Routers[name].TLS != nil,
 		ForceTLS: c.HTTP.containsRouter(name+"-http") && c.HTTP.Routers[name+"-http"].hasMiddleware("sys-redirscheme@file"),
+		Headers:  []headersInput{},
 	}
-}
-
-// Validate checks userinput against rules
-func (u *UserInput) Validate() (bool, ValidationError) {
-	var (
-		match bool
-		pass  bool = true
-		errs  ValidationError
-	)
-	errs = ValidationError{Field: make(map[string]string)}
-	if match, _ = regexp.MatchString("^[a-zA-Z0-9]{3,32}$", u.Name); !match {
-		pass = false
-		errs.Field["name"] = "String between 3 and 32 chars required" //append(errs, ValidationError{Field: "name", Message: "Name has invalid format"})
+	headers, ok := c.HTTP.Middlewares[name+"-headers"]
+	if ok {
+		for n, v := range headers.Headers.CustomRequestHeaders {
+			u.Headers = append(u.Headers, headersInput{Name: n, Value: v})
+		}
 	}
-
-	if match, _ = regexp.MatchString("^([a-zA-Z0-9]+\\.){2,63}[a-zA-Z]{2,6}$", u.Domain); !match {
-		pass = false
-		errs.Field["domain"] = "not a valid domain name" //append(errs, ValidationError{Field: "domain", Message: "Domain has invalid format"})
-	}
-
-	if match, _ = regexp.MatchString("^http(s)?:\\/\\/[a-zA-Z0-9.]+:\\d{0,5}$", u.Backend); !match {
-		pass = false
-		errs.Field["backend"] = "Format: http://192.168.1.12:5000" // append(errs, ValidationError{Field: "backend", Message: "Backend has invalid format"})
-	}
-
-	return pass, errs
+	return u
 }
 
 // New returns an initialized new config
@@ -142,6 +109,7 @@ func New(service string, c UserInput) Config {
 					},
 				},
 			},
+			Middlewares: make(map[string]*Middleware),
 		},
 	}
 }
@@ -196,6 +164,7 @@ func Create(cfgPath string, name string, c UserInput) error {
 			Rule:        cfg.HTTP.Routers[name].Rule,
 			Service:     cfg.HTTP.Routers[name].Service,
 		}
+
 		//add redirect middleware
 		if c.ForceTLS {
 			cfg.HTTP.Routers[name+"-http"].Middlewares = append(cfg.HTTP.Routers[name+"-http"].Middlewares, "sys-redirscheme@file")
@@ -205,6 +174,17 @@ func Create(cfgPath string, name string, c UserInput) error {
 		cfg.HTTP.Routers[name].Entrypoints = []string{"web"}
 	}
 
+	// do we need some headers?
+	headerMW := Headers{}
+	headerMW.fromInput(c)
+	if len(headerMW.CustomRequestHeaders) > 0 {
+		cfg.HTTP.Middlewares[name+"-headers"] = &Middleware{Headers: headerMW}
+		for _, r := range cfg.HTTP.Routers {
+			r.Middlewares = append(r.Middlewares, name+"-headers")
+		}
+	}
+
+	// Serialize and write the yaml config file
 	if b, err = yaml.Marshal(cfg); err != nil {
 		return err
 	}
