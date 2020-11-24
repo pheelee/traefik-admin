@@ -112,7 +112,13 @@ func saveConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	config.Create(path.Join(appcfg.ConfigPath, name+".yaml"), name, cfgopts)
+	cfg, err := config.Create(path.Join(appcfg.ConfigPath, name+".yaml"), name, cfgopts)
+	if err != nil {
+		panic(err)
+	}
+	cfgJSON := cfg.ToUserInput(name)
+	b, _ = json.Marshal(cfgJSON)
+	w.Write(b)
 }
 
 func deleteConfig(w http.ResponseWriter, r *http.Request) {
