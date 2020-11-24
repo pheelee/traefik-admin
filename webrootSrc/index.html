@@ -59,6 +59,7 @@
           <div class="col s12"> <!-- Tabs navigation-->
             <ul class="tabs">
               <li class="tab col s3"><a href="#general" class="active">General</a></li>
+              <li class="tab col s3"><a href="#basicauth">Basic Auth</a></li>
               <li class="tab col s3"><a href="#headers">Headers</a></li>
             </ul>
           </div>
@@ -103,7 +104,7 @@
           </div>
           </form>
         </div> <!-- end of Tab general-->
-        <div id="headers">
+        <div id="headers" class="listview">
           <div class="row">
           <form class="col s12 m12">
             <div class="row" v-for="(header,index) in editor.headers">
@@ -129,7 +130,33 @@
           </div>
         </div>
         </div><!-- end of Tab headers-->
+        <div id="basicauth" class="listview">
+          <div class="row">
+          <form class="col s12 m12">
+            <div class="row" v-for="(entry,index) in editor.basicauth">
+              <div class="input-field col s12 m6">
+                <i class="material-icons prefix" style="cursor:pointer" v-on:click="editor.basicauth.splice(index,1)">delete</i>
+                <input v-bind:id="'basicuser'+index" type="text" autocomplete="off" v-model="entry.Username">
+                <label v-bind:for="'basicuser'+index" v-bind:class="{active: editorMode=='Update'}">Username</label>
+            </div>
+            <div class="input-field col s12 m6">
+                <input v-bind:id="'basicpass'+index" type="password" autocomplete="off" v-model="entry.Password">
+                <label v-bind:for="'basicpass'+index" v-bind:class="{active: editorMode=='Update'}">Password</label>
+            </div>
+            </div>
+          </form>
         </div>
+          <div class="row">
+          <a class="btn-floating add-btn " v-on:click="addBasicAuth"><i class="small material-icons">add</i></a>
+          <div class="note">
+            <p>Notes:</p>
+            <ul>
+              <li>Passwords are hashed using bcrypt</li>
+            </ul>
+          </div>
+        </div>
+        </div><!-- end of Tab headers-->
+        </div><!-- end of Tabs -->
         <div class="row">
           <div class="col s12 m12 red-text" v-if="modal_errors.generic.length">
             <p>Errors:</p>

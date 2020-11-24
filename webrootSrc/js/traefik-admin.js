@@ -18,9 +18,14 @@ var defaults = {
     backend: '',
     https: true,
     forcetls: true,
-    headers: [{name:'',value:''}],
+    headers: [],
+    basicauth: [],
   },
-  modal_errors: {Field: {},generic:[]}
+  modal_errors: {Field: {},generic:[]},
+  structs: {
+    headers: {name:'',value:''},
+    basicauth: {Username: '',password:''}
+  }
 }
 
 var app = new Vue({
@@ -44,11 +49,12 @@ var app = new Vue({
             if(app.editorMode === 'Update'){
               method = 'PUT';
             }
-            ajax('config/'+app.editor.name,method,app.editor, function(){
+            ajax('config/'+app.editor.name,method,app.editor, function(data){
+                let config = JSON.parse(data)
                 if (app.editorMode === 'Create') 
-                  app.connections.push(app.editor);
+                  app.connections.push(config);
                 if (app.editorMode === 'Update')
-                  app.connections[app.connections.findIndex(el => el.name === app.editor.name)] = Object.assign({},app.editor);
+                  app.connections[app.connections.findIndex(el => el.name === app.editor.name)] = config;
                 M.Modal.getInstance(document.getElementById(senderId)).close();
             }, function(response){
               app.modal_errors = JSON.parse(response);
@@ -75,7 +81,10 @@ var app = new Vue({
             );
         },
         addHeader: function(){
-          app.editor.headers.push(Object.assign({}, defaults.editor.headers[0]));
+          app.editor.headers.push(Object.assign({}, defaults.structs.headers));
+        },
+        addBasicAuth: function(){
+          app.editor.basicauth.push(Object.assign({}, defaults.structs.basicauth));
         }
     }
   })

@@ -11,6 +11,7 @@ import (
 type Middleware struct {
 	RedirectScheme RedirectScheme `yaml:"redirectScheme,omitempty"`
 	Headers        Headers        `yaml:"headers,omitempty"`
+	BasicAuth      BasicAuth      `yaml:"basicAuth,omitempty"`
 }
 
 // RedirectScheme holds data for a schema redirect
@@ -22,6 +23,14 @@ type RedirectScheme struct {
 // Headers hold custom headers structure
 type Headers struct {
 	CustomRequestHeaders map[string]string `yaml:"customRequestHeaders,omitempty"`
+}
+
+//BasicAuth holds data for basic authentication
+type BasicAuth struct {
+	Users        []string `yaml:"users,omitempty"`
+	Realm        string   `yaml:"realm,omitempty"`
+	HeaderField  string   `yaml:"headerField,omitempty"`
+	RemoveHeader bool     `yaml:"removeHeader,omitempty"`
 }
 
 func (h *Headers) fromInput(c UserInput) {
@@ -38,7 +47,7 @@ func (h *Headers) fromInput(c UserInput) {
 					h.CustomRequestHeaders[uh.Name] = ip
 				}
 
-			case "":
+			default:
 				h.CustomRequestHeaders[uh.Name] = uh.Value
 			}
 		}

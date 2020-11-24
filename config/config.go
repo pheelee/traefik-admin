@@ -7,6 +7,7 @@ import (
 	"path"
 	"strings"
 
+	"golang.org/x/crypto/bcrypt"
 	"gopkg.in/yaml.v2"
 )
 
@@ -70,19 +71,28 @@ func (r *Router) hasMiddleware(name string) bool {
 	return false
 }
 
-func (c *Config) toUserInput(name string) UserInput {
+//ToUserInput converts a config to the struct used by the frontend
+func (c *Config) ToUserInput(name string) UserInput {
 	u := UserInput{
-		Name:     name,
-		Domain:   strings.TrimSuffix(strings.TrimPrefix(c.HTTP.Routers[name].Rule, "Host(`"), "`)"),
-		Backend:  c.HTTP.Services[name].LoadBalancer.Servers[0].URL,
-		HTTPS:    c.HTTP.Routers[name].TLS != nil,
-		ForceTLS: c.HTTP.containsRouter(name+"-http") && c.HTTP.Routers[name+"-http"].hasMiddleware("sys-redirscheme@file"),
-		Headers:  []headersInput{},
+		Name:      name,
+		Domain:    strings.TrimSuffix(strings.TrimPrefix(c.HTTP.Routers[name].Rule, "Host(`"), "`)"),
+		Backend:   c.HTTP.Services[name].LoadBalancer.Servers[0].URL,
+		HTTPS:     c.HTTP.Routers[name].TLS != nil,
+		ForceTLS:  c.HTTP.containsRouter(name+"-http") && c.HTTP.Routers[name+"-http"].hasMiddleware("sys-redirscheme@file"),
+		Headers:   []headersInput{},
+		BasicAuth: []basicAuthInput{},
 	}
 	headers, ok := c.HTTP.Middlewares[name+"-headers"]
 	if ok {
 		for n, v := range headers.Headers.CustomRequestHeaders {
 			u.Headers = append(u.Headers, headersInput{Name: n, Value: v})
+		}
+	}
+	auth, ok := c.HTTP.Middlewares[name+"-basicauth"]
+	if ok {
+		for _, entry := range auth.BasicAuth.Users {
+			raw := strings.Split(entry, ":")
+			u.BasicAuth = append(u.BasicAuth, basicAuthInput{Username: raw[0], Password: raw[1]})
 		}
 	}
 	return u
@@ -145,13 +155,13 @@ func GetAllUserInput(cfgPath string) ([]UserInput, error) {
 		if cfg == nil {
 			return nil, fmt.Errorf("invalid config %s", c)
 		}
-		configList = append(configList, cfg.toUserInput(c))
+		configList = append(configList, cfg.ToUserInput(c))
 	}
 	return configList, nil
 }
 
 // Create writes a new config
-func Create(cfgPath string, name string, c UserInput) error {
+func Create(cfgPath string, name string, c UserInput) (*Config, error) {
 	cfg := New(name, c)
 
 	// add or remove config options based on user inputs
@@ -174,7 +184,7 @@ func Create(cfgPath string, name string, c UserInput) error {
 		cfg.HTTP.Routers[name].Entrypoints = []string{"web"}
 	}
 
-	// do we need some headers?
+	// do we have some headers?
 	headerMW := Headers{}
 	headerMW.fromInput(c)
 	if len(headerMW.CustomRequestHeaders) > 0 {
@@ -184,14 +194,24 @@ func Create(cfgPath string, name string, c UserInput) error {
 		}
 	}
 
+	// do we have basic auth?
+	if len(c.BasicAuth) > 0 {
+		cfg.HTTP.Middlewares[name+"-basicauth"] = &Middleware{BasicAuth: BasicAuth{}}
+		for _, ba := range c.BasicAuth {
+			hash, _ := bcrypt.GenerateFromPassword([]byte(ba.Password), bcrypt.DefaultCost)
+			cfg.HTTP.Middlewares[name+"-basicauth"].BasicAuth.Users = append(cfg.HTTP.Middlewares[name+"-basicauth"].BasicAuth.Users, ba.Username+":"+string(hash))
+		}
+		cfg.HTTP.Routers[name].Middlewares = append(cfg.HTTP.Routers[name].Middlewares, name+"-basicauth")
+	}
+
 	// Serialize and write the yaml config file
 	if b, err = yaml.Marshal(cfg); err != nil {
-		return err
+		return nil, err
 	}
 	if err = ioutil.WriteFile(cfgPath, b, 0666); err != nil {
-		return err
+		return nil, err
 	}
-	return nil
+	return &cfg, nil
 }
 
 // List returns all configs in a directory
