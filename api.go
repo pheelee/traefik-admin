@@ -112,7 +112,7 @@ func saveConfig(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	cfg, err := config.Create(path.Join(appcfg.ConfigPath, name+".yaml"), name, cfgopts)
+	cfg, err := config.Create(path.Join(appcfg.ConfigPath, name+".yaml"), name, cfgopts, appcfg.ConfigOptions)
 	if err != nil {
 		panic(err)
 	}
