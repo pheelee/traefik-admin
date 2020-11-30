@@ -23,6 +23,7 @@ type RedirectScheme struct {
 // Headers hold custom headers structure
 type Headers struct {
 	CustomRequestHeaders map[string]string `yaml:"customRequestHeaders,omitempty"`
+	STSSeconds           int64             `yaml:"stsSeconds,omitempty"`
 }
 
 //BasicAuth holds data for basic authentication

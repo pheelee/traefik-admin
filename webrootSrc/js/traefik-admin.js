@@ -18,6 +18,7 @@ var defaults = {
     backend: '',
     https: true,
     forcetls: true,
+    hsts: true,
     headers: [],
     basicauth: [],
   },

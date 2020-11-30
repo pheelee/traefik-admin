@@ -83,7 +83,7 @@
             </div>
           </div>
           <div class="card">
-            <div class="col m4 l4 s6">
+            <div class="col m4 l4 s4">
               <div class="switch">
                 <label>
                   <input type="checkbox" v-model="editor.https">
@@ -92,12 +92,21 @@
                 </label>
               </div>
             </div>
-            <div class="col m4 l4 s6">
+            <div class="col m4 l4 s4">
               <div class="switch">
                 <label>
                   <input type="checkbox" v-model="editor.forcetls" v-bind:disabled="!editor.https">
                   <span class="lever"></span>
                   Forward http to https
+                </label>
+              </div>
+            </div>
+            <div class="col m4 l4 s4">
+              <div class="switch">
+                <label>
+                  <input type="checkbox" v-model="editor.hsts" v-bind:disabled="!editor.https">
+                  <span class="lever"></span>
+                  Enable HSTS
                 </label>
               </div>
             </div>

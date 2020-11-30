@@ -45,6 +45,11 @@ func main() {
 			Permanent: true,
 		},
 	}
+	mw.HTTP.Middlewares["sys-hsts"] = &config.Middleware{
+		Headers: config.Headers{
+			STSSeconds: 31536000,
+		},
+	}
 
 	if err := mw.Write(path.Join(cfg.ConfigPath, "sys_middlewares.yaml")); err != nil {
 		panic(err)

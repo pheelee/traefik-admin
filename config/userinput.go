@@ -9,6 +9,7 @@ type UserInput struct {
 	Backend   string           `json:"backend"`
 	HTTPS     bool             `json:"https"`
 	ForceTLS  bool             `json:"forcetls"`
+	HSTS      bool             `json:"hsts"`
 	Headers   []headersInput   `json:"headers"`
 	BasicAuth []basicAuthInput `json:"basicauth"`
 }
