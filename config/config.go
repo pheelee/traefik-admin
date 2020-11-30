@@ -49,13 +49,10 @@ type server struct {
 	URL string `yaml:"url"`
 }
 
-var (
-	fi          []os.FileInfo
-	err         error
-	b           []byte
-	cfg         Config
-	configFiles []string
-)
+// Options defines various static settings for config generation
+type Options struct {
+	CertResolver string
+}
 
 func (h *HTTP) containsRouter(name string) bool {
 	_, ok := h.Routers[name]
@@ -126,6 +123,11 @@ func New(service string, c UserInput) Config {
 
 // Get returns the requested config
 func Get(cfgPath string) (*Config, error) {
+	var (
+		b   []byte
+		err error
+		cfg Config
+	)
 	b, err = ioutil.ReadFile(cfgPath)
 	if err != nil {
 		return nil, err
@@ -139,8 +141,11 @@ func Get(cfgPath string) (*Config, error) {
 // GetAllUserInput returns config options for all configs
 func GetAllUserInput(cfgPath string) ([]UserInput, error) {
 	var (
-		configList []UserInput = []UserInput{}
-		cfg        *Config
+		configFiles []string
+		configList  []UserInput = []UserInput{}
+		cfg         *Config
+		err         error
+		b           []byte
 	)
 	if configFiles, err = List(cfgPath); err != nil {
 		return nil, err
@@ -161,13 +166,17 @@ func GetAllUserInput(cfgPath string) ([]UserInput, error) {
 }
 
 // Create writes a new config
-func Create(cfgPath string, name string, c UserInput) (*Config, error) {
+func Create(cfgPath string, name string, c UserInput, o Options) (*Config, error) {
+	var (
+		b   []byte
+		err error
+	)
 	cfg := New(name, c)
 
 	// add or remove config options based on user inputs
 	switch c.HTTPS {
 	case true:
-		cfg.HTTP.Routers[name].TLS = &routerTLSConfig{CertResolver: "http01"}
+		cfg.HTTP.Routers[name].TLS = &routerTLSConfig{CertResolver: o.CertResolver}
 		cfg.HTTP.Routers[name].Entrypoints = []string{"websecure"}
 		cfg.HTTP.Routers[name+"-http"] = &Router{
 			Entrypoints: []string{"web"},
@@ -178,6 +187,10 @@ func Create(cfgPath string, name string, c UserInput) (*Config, error) {
 		//add redirect middleware
 		if c.ForceTLS {
 			cfg.HTTP.Routers[name+"-http"].Middlewares = append(cfg.HTTP.Routers[name+"-http"].Middlewares, "sys-redirscheme@file")
+		}
+		// enable HSTS
+		if c.HSTS {
+			cfg.HTTP.Routers[name].Middlewares = append(cfg.HTTP.Routers[name].Middlewares, "sys-hsts@file")
 		}
 	case false:
 		cfg.HTTP.Routers[name].TLS = nil
@@ -218,6 +231,8 @@ func Create(cfgPath string, name string, c UserInput) (*Config, error) {
 func List(cfgPath string) ([]string, error) {
 	var (
 		cfgs []string
+		err  error
+		fi   []os.FileInfo
 	)
 	cfgs = make([]string, 0)
 
