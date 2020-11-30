@@ -33,10 +33,9 @@ type ValidationError struct {
 func (u *UserInput) Validate() (bool, ValidationError) {
 	var (
 		match bool
-		pass  bool = true
-		errs  ValidationError
+		pass  bool            = true
+		errs  ValidationError = ValidationError{Field: make(map[string]string), Generic: []string{}}
 	)
-	errs = ValidationError{Field: make(map[string]string)}
 	if match, _ = regexp.MatchString("^[a-zA-Z0-9]{3,32}$", u.Name); !match {
 		pass = false
 		errs.Field["name"] = "String between 3 and 32 chars required"
