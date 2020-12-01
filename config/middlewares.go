@@ -12,6 +12,7 @@ type Middleware struct {
 	RedirectScheme RedirectScheme `yaml:"redirectScheme,omitempty"`
 	Headers        Headers        `yaml:"headers,omitempty"`
 	BasicAuth      BasicAuth      `yaml:"basicAuth,omitempty"`
+	IPWhiteList    IPWhiteList    `yaml:"ipWhiteList,omitempty"`
 }
 
 // RedirectScheme holds data for a schema redirect
@@ -32,6 +33,17 @@ type BasicAuth struct {
 	Realm        string   `yaml:"realm,omitempty"`
 	HeaderField  string   `yaml:"headerField,omitempty"`
 	RemoveHeader bool     `yaml:"removeHeader,omitempty"`
+}
+
+// IPWhiteList holds the ip white list configuration.
+type IPWhiteList struct {
+	SourceRange []string    `yaml:"sourceRange,omitempty"`
+	IPStrategy  *IPStrategy `yaml:"ipStrategy,omitempty"`
+}
+
+// IPStrategy holds the ip strategy configuration.
+type IPStrategy struct {
+	Depth int `yaml:"depth,omitempty"`
 }
 
 func (h *Headers) fromInput(c UserInput) {

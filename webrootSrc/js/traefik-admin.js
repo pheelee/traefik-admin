@@ -21,6 +21,7 @@ var defaults = {
     hsts: true,
     headers: [],
     basicauth: [],
+    ipRestriction: {depth: 0, ips: []}
   },
   modal_errors: {Field: {},generic:[]},
   structs: {
@@ -86,6 +87,9 @@ var app = new Vue({
         },
         addBasicAuth: function(){
           app.editor.basicauth.push(Object.assign({}, defaults.structs.basicauth));
+        },
+        addIPRestriction: function(){
+          app.editor.ipRestriction.ips.push("")
         }
     }
   })

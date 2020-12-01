@@ -4,14 +4,15 @@ import "regexp"
 
 // UserInput hold the data submitted by the api request
 type UserInput struct {
-	Name      string           `json:"name"`
-	Domain    string           `json:"domain"`
-	Backend   string           `json:"backend"`
-	HTTPS     bool             `json:"https"`
-	ForceTLS  bool             `json:"forcetls"`
-	HSTS      bool             `json:"hsts"`
-	Headers   []headersInput   `json:"headers"`
-	BasicAuth []basicAuthInput `json:"basicauth"`
+	Name          string           `json:"name"`
+	Domain        string           `json:"domain"`
+	Backend       string           `json:"backend"`
+	HTTPS         bool             `json:"https"`
+	ForceTLS      bool             `json:"forcetls"`
+	HSTS          bool             `json:"hsts"`
+	Headers       []headersInput   `json:"headers"`
+	BasicAuth     []basicAuthInput `json:"basicauth"`
+	IPRestriction *ipRestriction   `json:"ipRestriction"`
 }
 
 type headersInput struct {
@@ -22,6 +23,11 @@ type headersInput struct {
 type basicAuthInput struct {
 	Username string
 	Password string
+}
+
+type ipRestriction struct {
+	Depth int      `json:"depth"`
+	IPs   []string `json:"ips"`
 }
 
 //ValidationError provides information about invalid fields
@@ -78,5 +84,23 @@ func (u *UserInput) Validate() (bool, ValidationError) {
 		}
 	}
 
+	// IP Restriction checks
+	if u.IPRestriction != nil {
+		if !inBetween(u.IPRestriction.Depth, 0, 30) {
+			pass = false
+			errs.Generic = append(errs.Generic, "ipRestriction depth must be between 1 and 30")
+		}
+		for _, i := range u.IPRestriction.IPs {
+			if match, _ = regexp.MatchString(`^(\d{1,3}\.){3}\d{1,3}(\/\d{2})?$`, i); !match {
+				pass = false
+				errs.Generic = append(errs.Generic, "ipRestriction contains invalid entries")
+			}
+		}
+	}
+
 	return pass, errs
+}
+
+func inBetween(i, min, max int) bool {
+	return i >= min && i <= max
 }

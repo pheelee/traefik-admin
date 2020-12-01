@@ -71,14 +71,15 @@ func (r *Router) hasMiddleware(name string) bool {
 //ToUserInput converts a config to the struct used by the frontend
 func (c *Config) ToUserInput(name string) UserInput {
 	u := UserInput{
-		Name:      name,
-		Domain:    strings.TrimSuffix(strings.TrimPrefix(c.HTTP.Routers[name].Rule, "Host(`"), "`)"),
-		Backend:   c.HTTP.Services[name].LoadBalancer.Servers[0].URL,
-		HTTPS:     c.HTTP.Routers[name].TLS != nil,
-		ForceTLS:  c.HTTP.containsRouter(name+"-http") && c.HTTP.Routers[name+"-http"].hasMiddleware("sys-redirscheme@file"),
-		HSTS:      c.HTTP.Routers[name].hasMiddleware("sys-hsts@file"),
-		Headers:   []headersInput{},
-		BasicAuth: []basicAuthInput{},
+		Name:          name,
+		Domain:        strings.TrimSuffix(strings.TrimPrefix(c.HTTP.Routers[name].Rule, "Host(`"), "`)"),
+		Backend:       c.HTTP.Services[name].LoadBalancer.Servers[0].URL,
+		HTTPS:         c.HTTP.Routers[name].TLS != nil,
+		ForceTLS:      c.HTTP.containsRouter(name+"-http") && c.HTTP.Routers[name+"-http"].hasMiddleware("sys-redirscheme@file"),
+		HSTS:          c.HTTP.Routers[name].hasMiddleware("sys-hsts@file"),
+		Headers:       []headersInput{},
+		BasicAuth:     []basicAuthInput{},
+		IPRestriction: &ipRestriction{Depth: 0, IPs: []string{}},
 	}
 	headers, ok := c.HTTP.Middlewares[name+"-headers"]
 	if ok {
@@ -92,6 +93,16 @@ func (c *Config) ToUserInput(name string) UserInput {
 			raw := strings.Split(entry, ":")
 			u.BasicAuth = append(u.BasicAuth, basicAuthInput{Username: raw[0], Password: raw[1]})
 		}
+	}
+	iprestriction, ok := c.HTTP.Middlewares[name+"-iprestrict"]
+	if ok {
+		u.IPRestriction = &ipRestriction{
+			IPs: iprestriction.IPWhiteList.SourceRange,
+		}
+		if iprestriction.IPWhiteList.IPStrategy != nil {
+			u.IPRestriction.Depth = iprestriction.IPWhiteList.IPStrategy.Depth
+		}
+
 	}
 	return u
 }
@@ -216,6 +227,18 @@ func Create(cfgPath string, name string, c UserInput, o Options) (*Config, error
 			cfg.HTTP.Middlewares[name+"-basicauth"].BasicAuth.Users = append(cfg.HTTP.Middlewares[name+"-basicauth"].BasicAuth.Users, ba.Username+":"+string(hash))
 		}
 		cfg.HTTP.Routers[name].Middlewares = append(cfg.HTTP.Routers[name].Middlewares, name+"-basicauth")
+	}
+
+	// do we have any ip restrictions?
+	if c.IPRestriction != nil && len(c.IPRestriction.IPs) > 0 {
+		mw := &Middleware{IPWhiteList: IPWhiteList{SourceRange: c.IPRestriction.IPs}}
+		if c.IPRestriction.Depth > 0 {
+			mw.IPWhiteList.IPStrategy = &IPStrategy{Depth: c.IPRestriction.Depth}
+		}
+		cfg.HTTP.Middlewares[name+"-iprestrict"] = mw
+		for _, r := range cfg.HTTP.Routers {
+			r.Middlewares = append(r.Middlewares, name+"-iprestrict")
+		}
 	}
 
 	// Serialize and write the yaml config file
