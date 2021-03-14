@@ -52,10 +52,6 @@ input {
   background-color:var(--primary-bg-color);
 }
 
-.modal-content .note {
-  color: var(--text-secondary-color)
-}
-
 .modal-content .add-btn {
   position: fixed;
   right: 10px;

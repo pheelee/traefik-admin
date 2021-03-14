@@ -12,11 +12,15 @@ import (
 
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
+	"github.com/gorilla/sessions"
 	"github.com/pheelee/traefik-admin/config"
+	"github.com/pheelee/traefik-admin/internal/indieauth"
 	"github.com/pheelee/traefik-admin/logger"
 )
 
 var appcfg appConfig
+
+var cookieStore *sessions.CookieStore
 
 func getAll(w http.ResponseWriter, r *http.Request) {
 	var (
@@ -42,7 +46,7 @@ func getConfig(w http.ResponseWriter, r *http.Request) {
 		b   []byte
 	)
 	name := mux.Vars(r)["name"]
-	if cfg, err = config.Get(path.Join(appcfg.ConfigPath, name+".yaml")); err != nil {
+	if cfg, err = config.FromFile(path.Join(appcfg.ConfigPath, name+".yaml")); err != nil {
 		panic(err)
 	}
 	if b, err = json.Marshal(cfg); err != nil {
@@ -160,17 +164,64 @@ func recovery(next http.Handler) http.Handler {
 	})
 }
 
+type features struct {
+	ForwardAuth bool `json:"forwardauth"`
+}
+
+func getFeatures(w http.ResponseWriter, r *http.Request) {
+	f := features{
+		ForwardAuth: appcfg.AuthorizationEndpoint != "",
+	}
+	b, _ := json.Marshal(f)
+	w.Write(b)
+}
+
 // SetupRoutes connects the functions to the endpoints
 func SetupRoutes(cfg appConfig) http.Handler {
 	appcfg = cfg
 	mux := mux.NewRouter()
 	fs := http.FileServer(http.Dir(cfg.WebRoot))
 	mux.Use(recovery)
+
+	// setup indieauth
+	if appcfg.AuthorizationEndpoint != "" {
+		cookieStore = sessions.NewCookieStore([]byte(appcfg.CookieSecret))
+		ia, err := indieauth.New(cookieStore, "http://localhost/endpoints", appcfg.AuthorizationEndpoint)
+		if err != nil {
+			panic(err)
+		}
+
+		iaMiddleware := ia.Middleware()
+		mux.HandleFunc(indieauth.DefaultRedirectPath, ia.RedirectHandler)
+		mux.HandleFunc("/logout", func(w http.ResponseWriter, r *http.Request) {
+			ia.Logout(w, r)
+		})
+
+		mux.Handle("/auth/verify", iaMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Write([]byte("authorized"))
+		})))
+
+		mux.HandleFunc("/auth", func(w http.ResponseWriter, r *http.Request) {
+			uri := r.Header.Get("X-Forwarded-Uri")
+			if strings.HasPrefix(uri, indieauth.DefaultRedirectPath) {
+				r.URL.Path = uri
+			} else {
+				r.URL.Path = "/auth/verify"
+			}
+			mux.ServeHTTP(w, r)
+		})
+
+		logger.Info(fmt.Sprintf("enabling forward-auth using endpoint %s", appcfg.AuthorizationEndpoint))
+	} else {
+		logger.Info("forward-auth middleware not enabled because no authorization endpoint was specified")
+	}
+
 	mux.PathPrefix("/static/").Handler(http.StripPrefix("/static/", fs))
 	mux.HandleFunc("/config/", getAll).Methods("GET")
 	mux.HandleFunc("/config/{name}", getConfig).Methods("GET")
 	mux.HandleFunc("/config/{name}", saveConfig).Methods("POST", "PUT")
 	mux.HandleFunc("/config/{name}", deleteConfig).Methods("DELETE")
+	mux.HandleFunc("/features", getFeatures).Methods("GET")
 
 	mux.PathPrefix("/").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, path.Join(appcfg.WebRoot, "index.html"))

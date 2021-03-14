@@ -1,7 +1,9 @@
-function ajax(url, method, data, success, failure) {
+function ajax(url, method, data, success, failure, progress=true) {
+  if (progress) Loader.Show();
   var xhr = window.XMLHttpRequest ? new XMLHttpRequest() : new ActiveXObject("Microsoft.XMLHTTP");
   xhr.open(method, url);
   xhr.onreadystatechange = function() {
+      if (progress) Loader.Hide();
       if (xhr.readyState>3 && xhr.status==200) { success(xhr.responseText); }
       if (xhr.readyState>3 && xhr.status > 399) {failure(xhr.responseText); }
   };
@@ -16,12 +18,13 @@ var defaults = {
     name: '',
     domain: '',
     backend: '',
+    forwardauth: false,
     https: true,
     forcetls: true,
     hsts: true,
     headers: [],
     basicauth: [],
-    ipRestriction: {depth: 0, ips: []}
+    ipRestriction: {depth: 0, ips: []},
   },
   modal_errors: {Field: {},generic:[]},
   structs: {
@@ -33,12 +36,16 @@ var defaults = {
 var app = new Vue({
     el: '#app',
     data: {
+      features: {
+        forwardauth: false,
+      },
+      copyright: (new Date()).getFullYear() + ' Philipp Ritter',
       message: 'Proxy Connections',
       connections: [],
       filter_view:[],
       filter_string: '',
-      modal_errors: Object.assign({}, defaults.modal_errors),
-      editor: Object.assign({},defaults.editor),
+      modal_errors: JSON.parse(JSON.stringify(defaults.modal_errors)),
+      editor: JSON.parse(JSON.stringify(defaults.editor)),
       editorMode: 'Create',
     },
     methods: {
@@ -51,6 +58,7 @@ var app = new Vue({
             if(app.editorMode === 'Update'){
               method = 'PUT';
             }
+
             ajax('config/'+app.editor.name,method,app.editor, function(data){
                 let config = JSON.parse(data)
                 if (app.editorMode === 'Create') 
@@ -58,8 +66,10 @@ var app = new Vue({
                 if (app.editorMode === 'Update')
                   app.connections[app.connections.findIndex(el => el.name === app.editor.name)] = config;
                 M.Modal.getInstance(document.getElementById(senderId)).close();
+                Notify.Success(app.editor.name, app.editorMode.toLowerCase() + "d")
             }, function(response){
               app.modal_errors = JSON.parse(response);
+              Notify.Error(app.editor.name, "failed")
             })
         },
         remove: function(event){
@@ -67,6 +77,7 @@ var app = new Vue({
           var name = app.connections[id].name;
           ajax('config/' + name, 'DELETE', null, function(){
             app.connections.splice(id, 1);
+            Notify.Success(name, "deleted")
           })
 
         },
@@ -95,13 +106,38 @@ var app = new Vue({
   })
 
 
+  var Notify = {
+    Success: function(sender,msg){
+      this._fire(sender,msg,"green")
+    },
+    Error: function(sender,msg){
+      this._fire(sender,msg,"red")
+    },
+    Info: function(sender,msg){
+      this._fire(sender,msg)
+    },
+    _fire: function(sender, msg, color=''){
+      M.toast({html: "<b>"+sender+"</b>&nbsp;<p>"+msg+"</p>", classes:color})
+    }
+  }
+
+  var Loader = {
+    el: document.getElementById("loaderProgress"),
+    Show: function(){
+      this.el.style.display = "block"
+    },
+    Hide: function(){
+      this.el.style.display = "none"
+    }
+  }
+
   document.addEventListener('DOMContentLoaded', function() {
 
     M.Modal.init(document.querySelectorAll('.modal'), {
       onCloseEnd: function(el) {
-        app.editor = Object.assign({},defaults.editor);
+        app.editor = JSON.parse(JSON.stringify(defaults.editor));
         app.editorMode = 'Create';
-        app.modal_errors = Object.assign({}, defaults.modal_errors);
+        app.modal_errors = JSON.parse(JSON.stringify(defaults.modal_errors));
         el.querySelectorAll("input").forEach((i) => {
           i.classList.remove("valid");
         })
@@ -120,7 +156,12 @@ var app = new Vue({
         app.connections = JSON.parse(data);
         app.filter_view = app.connections;
         document.getElementById("connectionList").style.display = "block";
+        Loader.Hide();
     });
+    ajax('features', 'GET', null, function(data){
+      app.features = JSON.parse(data);
+      Loader.Hide();
+    })
 
     
   });

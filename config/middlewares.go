@@ -7,12 +7,19 @@ import (
 	"github.com/pheelee/traefik-admin/logger"
 )
 
+const (
+	FORWARDAUTH = "sys-forwardauth"
+	REDIRSCHEME = "sys-redirscheme"
+	HSTS        = "sys-hsts"
+)
+
 // Middleware defines Traefik Middleware
 type Middleware struct {
 	RedirectScheme RedirectScheme `yaml:"redirectScheme,omitempty"`
 	Headers        Headers        `yaml:"headers,omitempty"`
 	BasicAuth      BasicAuth      `yaml:"basicAuth,omitempty"`
 	IPWhiteList    IPWhiteList    `yaml:"ipWhiteList,omitempty"`
+	ForwardAuth    ForwardAuth    `yaml:"forwardAuth,omitempty"`
 }
 
 // RedirectScheme holds data for a schema redirect
@@ -39,6 +46,11 @@ type BasicAuth struct {
 type IPWhiteList struct {
 	SourceRange []string    `yaml:"sourceRange,omitempty"`
 	IPStrategy  *IPStrategy `yaml:"ipStrategy,omitempty"`
+}
+
+// ForwardAuth holds the forward auth data
+type ForwardAuth struct {
+	Address string `yaml:"address,omitempty"`
 }
 
 // IPStrategy holds the ip strategy configuration.

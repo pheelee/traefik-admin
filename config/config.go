@@ -74,9 +74,10 @@ func (c *Config) ToUserInput(name string) UserInput {
 		Name:          name,
 		Domain:        strings.TrimSuffix(strings.TrimPrefix(c.HTTP.Routers[name].Rule, "Host(`"), "`)"),
 		Backend:       c.HTTP.Services[name].LoadBalancer.Servers[0].URL,
+		ForwardAuth:   c.HTTP.containsRouter(name+"-http") && c.HTTP.Routers[name+"-http"].hasMiddleware(FORWARDAUTH+"@file"),
 		HTTPS:         c.HTTP.Routers[name].TLS != nil,
-		ForceTLS:      c.HTTP.containsRouter(name+"-http") && c.HTTP.Routers[name+"-http"].hasMiddleware("sys-redirscheme@file"),
-		HSTS:          c.HTTP.Routers[name].hasMiddleware("sys-hsts@file"),
+		ForceTLS:      c.HTTP.containsRouter(name+"-http") && c.HTTP.Routers[name+"-http"].hasMiddleware(REDIRSCHEME+"@file"),
+		HSTS:          c.HTTP.Routers[name].hasMiddleware(HSTS + "@file"),
 		Headers:       []headersInput{},
 		BasicAuth:     []basicAuthInput{},
 		IPRestriction: &ipRestriction{Depth: 0, IPs: []string{}},
@@ -133,8 +134,8 @@ func New(service string, c UserInput) Config {
 	}
 }
 
-// Get returns the requested config
-func Get(cfgPath string) (*Config, error) {
+// FromFile returns the requested config
+func FromFile(cfgPath string) (*Config, error) {
 	var (
 		b   []byte
 		err error
@@ -159,7 +160,7 @@ func GetAllUserInput(cfgPath string) ([]UserInput, error) {
 		err         error
 		b           []byte
 	)
-	if configFiles, err = List(cfgPath); err != nil {
+	if configFiles, err = ListNames(cfgPath); err != nil {
 		return nil, err
 	}
 	for _, c := range configFiles {
@@ -198,15 +199,22 @@ func Create(cfgPath string, name string, c UserInput, o Options) (*Config, error
 
 		//add redirect middleware
 		if c.ForceTLS {
-			cfg.HTTP.Routers[name+"-http"].Middlewares = append(cfg.HTTP.Routers[name+"-http"].Middlewares, "sys-redirscheme@file")
+			cfg.HTTP.Routers[name+"-http"].Middlewares = append(cfg.HTTP.Routers[name+"-http"].Middlewares, REDIRSCHEME+"@file")
 		}
 		// enable HSTS
 		if c.HSTS {
-			cfg.HTTP.Routers[name].Middlewares = append(cfg.HTTP.Routers[name].Middlewares, "sys-hsts@file")
+			cfg.HTTP.Routers[name].Middlewares = append(cfg.HTTP.Routers[name].Middlewares, HSTS+"@file")
 		}
 	case false:
 		cfg.HTTP.Routers[name].TLS = nil
 		cfg.HTTP.Routers[name].Entrypoints = []string{"web"}
+	}
+
+	// add forward auth middleware
+	if c.ForwardAuth {
+		for _, r := range cfg.HTTP.Routers {
+			r.Middlewares = append(r.Middlewares, FORWARDAUTH+"@file")
+		}
 	}
 
 	// do we have some headers?
@@ -251,8 +259,8 @@ func Create(cfgPath string, name string, c UserInput, o Options) (*Config, error
 	return &cfg, nil
 }
 
-// List returns all configs in a directory
-func List(cfgPath string) ([]string, error) {
+// ListNames returns all configs in a directory
+func ListNames(cfgPath string) ([]string, error) {
 	var (
 		cfgs []string
 		err  error

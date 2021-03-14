@@ -7,6 +7,7 @@ type UserInput struct {
 	Name          string           `json:"name"`
 	Domain        string           `json:"domain"`
 	Backend       string           `json:"backend"`
+	ForwardAuth   bool             `json:"forwardauth"`
 	HTTPS         bool             `json:"https"`
 	ForceTLS      bool             `json:"forcetls"`
 	HSTS          bool             `json:"hsts"`
