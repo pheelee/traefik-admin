@@ -164,6 +164,16 @@ func recovery(next http.Handler) http.Handler {
 	})
 }
 
+func requireAjax(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("Content-Type") != "application/json" || r.Header.Get("X-Requested-With") != "XMLHttpRequest" {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
 type features struct {
 	ForwardAuth bool `json:"forwardauth"`
 }
@@ -217,10 +227,12 @@ func SetupRoutes(cfg appConfig) http.Handler {
 	}
 
 	mux.PathPrefix("/static/").Handler(http.StripPrefix("/static/", fs))
-	mux.HandleFunc("/config/", getAll).Methods("GET")
-	mux.HandleFunc("/config/{name}", getConfig).Methods("GET")
-	mux.HandleFunc("/config/{name}", saveConfig).Methods("POST", "PUT")
-	mux.HandleFunc("/config/{name}", deleteConfig).Methods("DELETE")
+	cfgmux := mux.PathPrefix("/config").Subrouter()
+	cfgmux.Use(requireAjax)
+	cfgmux.HandleFunc("/", getAll).Methods("GET")
+	cfgmux.HandleFunc("/{name}", getConfig).Methods("GET")
+	cfgmux.HandleFunc("/{name}", saveConfig).Methods("POST", "PUT")
+	cfgmux.HandleFunc("/{name}", deleteConfig).Methods("DELETE")
 	mux.HandleFunc("/features", getFeatures).Methods("GET")
 
 	mux.PathPrefix("/").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
