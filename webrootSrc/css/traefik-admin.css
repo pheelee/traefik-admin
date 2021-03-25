@@ -81,3 +81,11 @@ input {
 .tabs .indicator {
   background-color: var(--alt-accent-color)
 }
+
+#confirmModal {
+  height: 20%;
+  width: 40%;
+}
+#confirmModal .confirm-text {
+  margin-top: 50px;
+}

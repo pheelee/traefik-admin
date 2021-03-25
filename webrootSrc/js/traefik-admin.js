@@ -40,6 +40,7 @@ var app = new Vue({
         forwardauth: false,
       },
       copyright: (new Date()).getFullYear() + ' Philipp Ritter',
+      confirmDialog: {title: 'Confirm', text: '', id: 0},
       message: 'Proxy Connections',
       connections: [],
       filter_view:[],
@@ -75,10 +76,12 @@ var app = new Vue({
         remove: function(event){
           var id = event.target.dataset["id"];
           var name = app.connections[id].name;
-          ajax('config/' + name, 'DELETE', null, function(){
-            app.connections.splice(id, 1);
-            Notify.Success(name, "deleted")
-          })
+          Modal.Open({title: 'Delete Config',text: "Do you really want to delete " + name + " ?",id:id, onYes: function(){
+            ajax('config/' + name, 'DELETE', null, function(){
+              app.connections.splice(id, 1);
+              Notify.Success(name, "deleted")
+            })
+          }})
 
         },
         edit: function(){
@@ -130,6 +133,23 @@ var app = new Vue({
       this.el.style.display = "none"
     }
   }
+
+  var Modal = {
+    Open: function({
+      title='Confirm',
+      text= '',
+      id = 0,
+      onYes= function(){},
+      onNo= function(){}
+    }){
+      app.confirmDialog = {title:title,text: text,id:id};
+      M.Modal.init(document.getElementById("confirmModal"), {}).open();
+      document.getElementById("confirmYesBtn").addEventListener('click', onYes);
+      document.getElementById("confirmNoBtn").addEventListener('click', onNo);
+    }
+  }
+
+  var test = 
 
   document.addEventListener('DOMContentLoaded', function() {
 
