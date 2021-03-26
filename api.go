@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"os"
 	"path"
 	"strings"
@@ -211,7 +212,7 @@ func SetupRoutes(cfg appConfig) http.Handler {
 		mux.HandleFunc("/auth", func(w http.ResponseWriter, r *http.Request) {
 			uri := r.Header.Get("X-Forwarded-Uri")
 			if strings.HasPrefix(uri, indieauth.DefaultRedirectPath) {
-				r.URL.Path = uri
+				r.URL, _ = url.Parse(uri)
 			} else {
 				r.URL.Path = "/auth/verify"
 			}
