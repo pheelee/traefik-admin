@@ -59,6 +59,15 @@ func (h *HTTP) containsRouter(name string) bool {
 	return ok
 }
 
+func (h *HTTP) hasAnyRouterMiddleware(name string) bool {
+	for _, r := range h.Routers {
+		if r.hasMiddleware(name) {
+			return true
+		}
+	}
+	return false
+}
+
 func (r *Router) hasMiddleware(name string) bool {
 	for _, m := range r.Middlewares {
 		if m == name {
@@ -74,7 +83,7 @@ func (c *Config) ToUserInput(name string) UserInput {
 		Name:          name,
 		Domain:        strings.TrimSuffix(strings.TrimPrefix(c.HTTP.Routers[name].Rule, "Host(`"), "`)"),
 		Backend:       c.HTTP.Services[name].LoadBalancer.Servers[0].URL,
-		ForwardAuth:   c.HTTP.containsRouter(name+"-http") && c.HTTP.Routers[name+"-http"].hasMiddleware(FORWARDAUTH+"@file"),
+		ForwardAuth:   c.HTTP.hasAnyRouterMiddleware(FORWARDAUTH + "@file"),
 		HTTPS:         c.HTTP.Routers[name].TLS != nil,
 		ForceTLS:      c.HTTP.containsRouter(name+"-http") && c.HTTP.Routers[name+"-http"].hasMiddleware(REDIRSCHEME+"@file"),
 		HSTS:          c.HTTP.Routers[name].hasMiddleware(HSTS + "@file"),
