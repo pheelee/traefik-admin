@@ -47,8 +47,23 @@ input {
   max-width: 800px;
 }
 
+#editModal {
+  max-height:90%;
+  height: 90%;
+  top:5% !important;
+}
+
 .modal {
   background-color:var(--primary-bg-color);
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display:none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 
 .modal-content {
