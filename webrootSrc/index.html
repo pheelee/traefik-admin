@@ -46,8 +46,8 @@
             <div class="card">
               <div class="card-content white-text">
                 <span class="card-title">{{con.name}}</span>
-                <p><a v-bind:href="'https://' + con.domain" target="_blank">{{con.domain}}</a></p>
-                <p class="green-text">{{con.backend}}</p>
+                  <p><a v-bind:href="'https://' + con.domain" target="_blank">{{con.domain}}</a></p>
+                  <p class="green-text">{{con.backend}}</p>
               </div>
               <div class="card-action">
                 <a href="#" v-on:click="edit" v-bind:data-id="index">Edit</a>
@@ -60,9 +60,9 @@
     </div>
     <div id="editModal" class="modal white-text modal-fixed-footer">
       <div class="modal-content ">
-        <h6>Proxy Connection Details</h6>
+        <div class="modal-title">{{editor.name}}</div>
         <div class="row"> <!-- Tabs Content-->
-          <div class="col s12"> <!-- Tabs navigation-->
+          <div class="col s12 z-depth-2"> <!-- Tabs navigation-->
             <ul class="tabs">
               <li class="tab col s3"><a href="#general" class="active">General</a></li>
               <li class="tab col s3"><a href="#basicauth">Auth</a></li>
@@ -70,151 +70,143 @@
               <li class="tab col s3"><a href="#headers">Headers</a></li>
             </ul>
           </div>
+          <div class="row tab-content">
           <div id="general">
-            <div class="row"></div>
-        <form class="col s12 m12">
-          <div class="row">
-            <div class="input-field col s12 m6">
-                <input id="name" type="text" autocomplete="off" class="validate" v-model="editor.name" v-bind:class="{invalid: modal_errors.Field.name != null || ''}">
-                <label for="name" v-bind:class="{active: editorMode=='Update'}">Config Name</label>
-                <span class="helper-text" v-bind:data-error="modal_errors.Field.name"></span>
-            </div>
-            <div class="input-field col s12 m6">
-                <input id="domain" type="text" autocomplete="off" class="validate" v-model="editor.domain"  v-bind:class="{invalid: modal_errors.Field.domain != null || ''}">
-                <label for="domain" v-bind:class="{active: editorMode=='Update'}">Domain</label>
-                <span class="helper-text" v-bind:data-error="modal_errors.Field.domain"></span>
-            </div>
-            <div class="input-field col s12 m6">
-              <input id="backend" type="text" autocomplete="off" class="validate" v-model="editor.backend"  v-bind:class="{invalid: modal_errors.Field.backend != null || ''}">
-              <label for="backend" v-bind:class="{active: editorMode=='Update'}">Backend</label>
-              <span class="helper-text" v-bind:data-error="modal_errors.Field.backend"></span>
-
-            </div>
-          </div>
-          <h6>Encryption</h6>
-          <div class="card">
-            <div class="col m4 l4 s4">
-              <div class="switch">
-                <label>
-                  <input type="checkbox" v-model="editor.https">
-                  <span class="lever"></span>
-                  SSL/TLS
-                </label>
-              </div>
-            </div>
-            <div class="col m4 l4 s4">
-              <div class="switch">
-                <label>
-                  <input type="checkbox" v-model="editor.forcetls" v-bind:disabled="!editor.https">
-                  <span class="lever"></span>
-                  Forward http to https
-                </label>
-              </div>
-            </div>
-            <div class="col m4 l4 s4">
-              <div class="switch">
-                <label>
-                  <input type="checkbox" v-model="editor.hsts" v-bind:disabled="!editor.https">
-                  <span class="lever"></span>
-                  Enable HSTS
-                </label>
-              </div>
-            </div>
-          </div>
-          </form>
-        </div> <!-- end of Tab general-->
-        <div id="basicauth" class="listview">
-          <div class="row"></div>
-          <h6>Forward Auth</h6>
-          <div class="row">
-            <div class="col m12 s12">
-              <div class="switch">
-                <label>
-                  <input type="checkbox" v-model="editor.forwardauth" v-bind:disabled="!features.forwardauth">
-                  <span class="lever"></span>
-                  <span>{{editor.forwardauth ? 'Enabled' : 'Disabled'}}</span>
-                </label>
-              </div>
-            </div>
-          </div>
-          <h6>Basic Auth</h6>
-          <div class="row" style="padding-top:15px;">
-          
-          <form class="col s12 m12">
-            <div class="row" v-for="(entry,index) in editor.basicauth">
+            <form class="col s12 m12">
+            <div class="row z-depth-1">
+              <div class="section-title">Proxy</div>
               <div class="input-field col s12 m6">
-                <i class="material-icons prefix" style="cursor:pointer" v-on:click="editor.basicauth.splice(index,1)">delete</i>
-                <input v-bind:id="'basicuser'+index" type="text" autocomplete="off" v-model="entry.Username">
-                <label v-bind:for="'basicuser'+index" v-bind:class="{active: editorMode=='Update'}">Username</label>
+                  <input id="name" type="text" autocomplete="off" class="validate" v-model="editor.name" v-bind:class="{invalid: validation.errors.name != ''}">
+                  <label for="name" v-bind:class="{active: editorMode=='Update'}">Config Name</label>
+                  <span class="helper-text" v-bind:data-error="validation.errors.name"></span>
+              </div>
+              <div class="input-field col s12 m6">
+                  <input id="domain" type="text" autocomplete="off" class="validate" v-model="editor.domain"  v-bind:class="{invalid: validation.errors.domain != ''}">
+                  <label for="domain" v-bind:class="{active: editorMode=='Update'}">Domain</label>
+                  <span class="helper-text" v-bind:data-error="validation.errors.domain"></span>
+              </div>
+              <div class="input-field col s12 m6">
+                <input id="backend" type="text" autocomplete="off" class="validate" v-model="editor.backend"  v-bind:class="{invalid: validation.errors.backend != ''}">
+                <label for="backend" v-bind:class="{active: editorMode=='Update'}">Backend</label>
+                <span class="helper-text" v-bind:data-error="validation.errors.backend"></span>
+
+              </div>
             </div>
-            <div class="input-field col s12 m6">
-                <input v-bind:id="'basicpass'+index" type="password" autocomplete="off" v-model="entry.Password">
-                <label v-bind:for="'basicpass'+index" v-bind:class="{active: editorMode=='Update'}">Password</label>
+            <div class="row z-depth-1">
+              <div class="section-title">Encryption</div>
+              <div class="row" style="padding-top:10px;">
+              <div class="col m4 l4 s4">
+                <div class="switch">
+                  <label>
+                    <input type="checkbox" v-model="editor.https">
+                    <span class="lever"></span>
+                    SSL/TLS
+                  </label>
+                </div>
+              </div>
+              <div class="col m4 l4 s4">
+                <div class="switch">
+                  <label>
+                    <input type="checkbox" v-model="editor.forcetls" v-bind:disabled="!editor.https">
+                    <span class="lever"></span>
+                    Forward http to https
+                  </label>
+                </div>
+              </div>
+              <div class="col m4 l4 s4">
+                <div class="switch">
+                  <label>
+                    <input type="checkbox" v-model="editor.hsts" v-bind:disabled="!editor.https">
+                    <span class="lever"></span>
+                    Enable HSTS
+                  </label>
+                </div>
+              </div>
             </div>
             </div>
-          </form>
-        </div>
-          <div class="row">
-          <a class="btn-floating add-btn " v-on:click="addBasicAuth"><i class="small material-icons">add</i></a>
-        </div>
-        </div><!-- end of Tab basicauth-->
-        <div id="iprestrict" class="listview">
-          <div class="row"></div>
-          <div class="row">
+            </form>
+          </div> <!-- end of Tab general-->
+          <div id="basicauth">
+            <div class="row z-depth-1">
+              <div class="section-title">Forward Auth</div>
+              <div class="row" style="padding-top:10px;">
+              <div class="col m4 s12">
+                <div class="switch">
+                  <label>
+                    <input type="checkbox" v-model="editor.forwardauth" v-bind:disabled="!features.forwardauth.enabled">
+                    <span class="lever"></span>
+                    <span>{{editor.forwardauth ? 'Enabled' : 'Disabled'}}</span>
+                  </label>
+                  </div>
+                </div>
+                <div class="col m8 s12">
+                  <span style="color:var(--text-secondary-color);">{{features.forwardauth.url}}</span>
+                </div>
+              </div> 
+            </div>
+            <div class="row z-depth-1" style="padding-top:15px;padding-bottom:15px;">
+            <div class="section-title">Basic Auth</div>
+            <form class="col s12 m12">
+              <div class="row input" v-for="(entry,index) in editor.basicauth">
+                <div class="input-field col s12 m6">
+                  <input v-bind:id="'basicuser'+index" type="text" autocomplete="off" v-model="entry.Username" v-bind:class="{invalid: validation.errors.basicauth[index].username != ''}">
+                  <label v-bind:for="'basicuser'+index" v-bind:class="{active: editorMode=='Update'}">Username</label>
+                  <span class="helper-text" v-bind:data-error="validation.errors.basicauth[index].username"></span>
+              </div>
+              <div class="input-field col s12 m6">
+                  <input v-bind:id="'basicpass'+index" type="password" autocomplete="off" v-model="entry.Password" v-bind:class="{invalid: validation.errors.basicauth[index].password != ''}">
+                  <label v-bind:for="'basicpass'+index" v-bind:class="{active: editorMode=='Update'}">Password</label>
+                  <span class="helper-text" v-bind:data-error="validation.errors.basicauth[index].password"></span>
+              </div>
+              </div>
+            </form>
+          </div>
+          </div><!-- end of Tab basicauth-->
+        <div id="iprestrict">
+          <div class="row z-depth-1" style="padding-bottom:15px;">
+            <div class="section-title">Reverse Proxy instances</div>
             <div class="input-field col s12 m3">
               <i class="material-icons prefix">format_list_numbered</i>
               <input id="ipRestrictionDepth" type="text" autocomplete="off" v-model.number="editor.ipRestriction.depth">
-              <label for="ipRestrictionDepth" v-bind:class="{active: editorMode=='Update'}"># proxies</label>
             </div>
             <div class="col s12 m9" style="line-height:65px;">
               <span>Number of reverse proxy in front of this one</span>
             </div>
           </div>
-
-          <div class="row">
+          <div class="row z-depth-1" style="padding-bottom:0px;">
+          <div class="section-title">Allowed IPs / Nets</div>
           <form class="col s12 m12">
-            <div class="row" v-for="(entry,index) in editor.ipRestriction.ips">
-              <div class="input-field col s12 m6">
-                <i class="material-icons prefix" style="cursor:pointer" v-on:click="editor.ipRestriction.ips.splice(index,1)">delete</i>
-                <input v-bind:id="'ipRestriction'+index" type="text" autocomplete="off" v-model="editor.ipRestriction.ips[index]">
+            <div class="row" >
+              <div class="input-field col s12 m8" v-for="(entry,index) in editor.ipRestriction.ips">
+                <input v-bind:id="'ipRestriction'+index" type="text" autocomplete="off" v-model="editor.ipRestriction.ips[index]" v-bind:class="{invalid: validation.errors.allowedip.ip[index] != ''}">
                 <label v-bind:for="'ipRestriction'+index" v-bind:class="{active: editorMode=='Update'}">IP / CIDR</label>
-            </div>
+                <span class="helper-text" v-bind:data-error="validation.errors.allowedip.ip[index]"></span>
+              </div>
             </div>
           </form>
         </div>
-          <div class="row">
-          <a class="btn-floating add-btn " v-on:click="addIPRestriction"><i class="small material-icons">add</i></a>
-        </div>
-        </div><!-- end of Tab basicauth-->
-        <div id="headers" class="listview">
-          <div class="row">
+        </div><!-- end of Tab iprestrict-->
+        <div id="headers">
+          <div class="row z-depth-1" style="padding-bottom:15px;">
+          <div class="section-title">Custom Headers</div>
           <form class="col s12 m12">
-            <div class="row" v-for="(header,index) in editor.headers">
+            <div class="row input" v-for="(header,index) in editor.headers">
               <div class="input-field col s12 m6">
-                <i class="material-icons prefix" style="cursor:pointer" v-on:click="editor.headers.splice(index,1)">delete</i>
-                <input v-bind:id="'headername'+index" type="text" autocomplete="off" v-model="header.Name">
+                <input v-bind:id="'headername'+index" type="text" autocomplete="off" v-model="header.Name" v-bind:class="{invalid: validation.errors.headers[index].name != ''}">
                 <label v-bind:for="'headername'+index" v-bind:class="{active: editorMode=='Update'}">Name</label>
+                <span class="helper-text" v-bind:data-error="validation.errors.headers[index].name"></span>
             </div>
             <div class="input-field col s12 m6">
-                <input v-bind:id="'headervalue'+index" type="text" autocomplete="off" v-model="header.Value">
+                <input v-bind:id="'headervalue'+index" type="text" autocomplete="off" v-model="header.Value" v-bind:class="{invalid: validation.errors.headers[index].value != ''}">
                 <label v-bind:for="'headervalue'+index" v-bind:class="{active: editorMode=='Update'}">Value</label>
+                <span class="helper-text" v-bind:data-error="validation.errors.headers[index].value"></span>
             </div>
             </div>
           </form>
         </div>
-          <div class="row">
-          <a class="btn-floating add-btn " v-on:click="addHeader"><i class="small material-icons">add</i></a>
-        </div>
         </div><!-- end of Tab headers-->
+        </div><!-- end of row tab content-->
         </div><!-- end of Tabs -->
-        <div class="row">
-          <div class="col s12 m12 red-text" v-if="modal_errors.generic.length">
-            <p>Errors:</p>
-            <ul>
-              <li v-for="err in modal_errors.generic">{{err}}</li>
-            </ul>
-          </div>
-        </div>
       </div>
       <div class="modal-footer">
         <a href="#!" class="modal-close waves-effect waves-green btn-flat white-text">Close</a>

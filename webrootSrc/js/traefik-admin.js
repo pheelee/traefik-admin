@@ -22,14 +22,47 @@ var defaults = {
     https: true,
     forcetls: true,
     hsts: true,
-    headers: [],
-    basicauth: [],
-    ipRestriction: {depth: 0, ips: []},
+    headers: [
+      {name:'',value:''},
+      {name:'',value:''},
+      {name:'',value:''},
+      {name:'',value:''},
+      {name:'',value:''},
+    ],
+    basicauth: [
+      {Username: '', password:''},
+      {Username: '', password:''},
+      {Username: '', password:''},
+      {Username: '', password:''},
+      {Username: '', password:''},
+    ],
+    ipRestriction: {depth: 0, ips: ["","","","",""]},
   },
-  modal_errors: {Field: {},generic:[]},
-  structs: {
-    headers: {name:'',value:''},
-    basicauth: {Username: '',password:''}
+  validation: {
+    valid: true,
+    errors: {
+      name: '',
+      domain: '',
+      backend: '',
+      basicauth: [
+        {username:'',password:''},
+        {username:'',password:''},
+        {username:'',password:''},
+        {username:'',password:''},
+        {username:'',password:''},
+      ],
+      allowedip: {
+        noproxies: '',
+        ip: ['','','','','']
+      },
+      headers: [
+        {name:'',value:''},
+        {name:'',value:''},
+        {name:'',value:''},
+        {name:'',value:''},
+        {name:'',value:''},
+      ]
+    }
   }
 }
 
@@ -37,15 +70,19 @@ var app = new Vue({
     el: '#app',
     data: {
       features: {
-        forwardauth: false,
+        forwardauth: {
+          enabled: false,
+          url: ''
+        },
       },
       copyright: (new Date()).getFullYear() + ' Philipp Ritter',
       confirmDialog: {title: 'Confirm', text: '', id: 0},
+      endpoint: '',
       message: 'Proxy Connections',
       connections: [],
       filter_view:[],
       filter_string: '',
-      modal_errors: JSON.parse(JSON.stringify(defaults.modal_errors)),
+      validation: JSON.parse(JSON.stringify(defaults.validation)),
       editor: JSON.parse(JSON.stringify(defaults.editor)),
       editorMode: 'Create',
     },
@@ -67,10 +104,10 @@ var app = new Vue({
                 if (app.editorMode === 'Update')
                   app.connections[app.connections.findIndex(el => el.name === app.editor.name)] = config;
                 M.Modal.getInstance(document.getElementById(senderId)).close();
-                Notify.Success(app.editor.name, app.editorMode.toLowerCase() + "d")
+                Notify.Success(app.editor.name, "successfully " + app.editorMode.toLowerCase() + "d")
             }, function(response){
-              app.modal_errors = JSON.parse(response);
-              Notify.Error(app.editor.name, "failed")
+              app.validation = JSON.parse(response);
+              Notify.Error(app.editor.name, "failed to create/update")
             })
         },
         remove: function(event){
@@ -79,7 +116,7 @@ var app = new Vue({
           Modal.Open({title: 'Delete Config',text: "Do you really want to delete " + name + " ?",id:id, onYes: function(){
             ajax('config/' + name, 'DELETE', null, function(){
               app.connections.splice(id, 1);
-              Notify.Success(name, "deleted")
+              Notify.Success(name, "config deleted")
             })
           }})
 
@@ -96,15 +133,6 @@ var app = new Vue({
             c.domain.toLowerCase().includes(filter) || c.name.toLowerCase().includes(filter) || c.backend.toLowerCase().includes(filter)
             );
         },
-        addHeader: function(){
-          app.editor.headers.push(Object.assign({}, defaults.structs.headers));
-        },
-        addBasicAuth: function(){
-          app.editor.basicauth.push(Object.assign({}, defaults.structs.basicauth));
-        },
-        addIPRestriction: function(){
-          app.editor.ipRestriction.ips.push("")
-        }
     }
   })
 
@@ -149,15 +177,13 @@ var app = new Vue({
     }
   }
 
-  var test = 
-
   document.addEventListener('DOMContentLoaded', function() {
 
     M.Modal.init(document.querySelectorAll('.modal'), {
       onCloseEnd: function(el) {
         app.editor = JSON.parse(JSON.stringify(defaults.editor));
         app.editorMode = 'Create';
-        app.modal_errors = JSON.parse(JSON.stringify(defaults.modal_errors));
+        app.validation = JSON.parse(JSON.stringify(defaults.validation));
         el.querySelectorAll("input").forEach((i) => {
           i.classList.remove("valid");
         })

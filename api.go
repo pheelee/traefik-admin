@@ -8,7 +8,6 @@ import (
 	"os"
 	"path"
 	"strings"
-	"time"
 
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
@@ -57,12 +56,12 @@ func getConfig(w http.ResponseWriter, r *http.Request) {
 }
 
 func saveConfig(w http.ResponseWriter, r *http.Request) {
+
 	var (
-		b       []byte
-		err     error
-		ret     bool
-		cfgopts config.UserInput
-		vErrs   config.ValidationError = config.ValidationError{Field: make(map[string]string), Generic: []string{}}
+		b          []byte
+		err        error
+		cfgopts    config.UserInput
+		validation config.Validation = config.NewValidation()
 	)
 
 	name := mux.Vars(r)["name"]
@@ -72,8 +71,9 @@ func saveConfig(w http.ResponseWriter, r *http.Request) {
 	case "POST":
 		// check if config already exists
 		if config.Exists(path.Join(appcfg.ConfigPath, name+".yaml")) {
-			vErrs.Field["name"] = "Duplicate names not allowed"
-			b, _ = json.Marshal(vErrs)
+			validation.Errors.Name = "Duplicate names not allowed"
+			validation.Valid = false
+			b, _ = json.Marshal(validation)
 			w.WriteHeader(http.StatusConflict)
 			w.Write(b)
 			return
@@ -81,8 +81,9 @@ func saveConfig(w http.ResponseWriter, r *http.Request) {
 	case "PUT":
 		// check if config exists
 		if !config.Exists(path.Join(appcfg.ConfigPath, name+".yaml")) {
-			vErrs.Field["name"] = "Cannot rename config"
-			b, _ = json.Marshal(vErrs)
+			validation.Errors.Name = "Cannot rename config"
+			validation.Valid = false
+			b, _ = json.Marshal(validation)
 			w.WriteHeader(http.StatusNotFound)
 			w.Write(b)
 			return
@@ -94,14 +95,16 @@ func saveConfig(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		b, _ = json.Marshal(vErrs)
+		validation.Valid = false
+		b, _ = json.Marshal(validation)
 		logger.Error(err)
 		w.Write(b)
 		return
 	}
 	if err = json.Unmarshal(b, &cfgopts); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		b, _ = json.Marshal(vErrs)
+		validation.Valid = false
+		b, _ = json.Marshal(validation)
 		logger.Error(err)
 		w.Write(b)
 		return
@@ -109,9 +112,9 @@ func saveConfig(w http.ResponseWriter, r *http.Request) {
 
 	// Validate user input
 
-	if ret, vErrs = cfgopts.Validate(); !ret {
+	if validation = cfgopts.Validate(); !validation.Valid {
 		w.WriteHeader(http.StatusBadRequest)
-		b, _ = json.Marshal(vErrs)
+		b, _ = json.Marshal(validation)
 		w.Write(b)
 		return
 	}
@@ -130,20 +133,6 @@ func deleteConfig(w http.ResponseWriter, r *http.Request) {
 	if err := config.Delete(path.Join(appcfg.ConfigPath, name+".yaml")); err != nil {
 		panic(err)
 	}
-}
-
-func logRequest(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		t1 := time.Now()
-		next.ServeHTTP(w, r)
-		srcIP := r.RemoteAddr
-		fwdIP := r.Header.Get("X-Forwarded-For")
-		if len(fwdIP) > 0 {
-			srcIP = strings.Split(fwdIP, " ")[0]
-		}
-
-		logger.Info(fmt.Sprintf("%s %s %s %dms", r.Method, r.URL.Path, srcIP, time.Now().Sub(t1).Milliseconds()))
-	})
 }
 
 func recovery(next http.Handler) http.Handler {
@@ -175,12 +164,20 @@ func requireAjax(next http.Handler) http.Handler {
 }
 
 type features struct {
-	ForwardAuth bool `json:"forwardauth"`
+	ForwardAuth forwardauth `json:"forwardauth"`
+}
+
+type forwardauth struct {
+	Enabled bool   `json:"enabled"`
+	URL     string `json:"url"`
 }
 
 func getFeatures(w http.ResponseWriter, r *http.Request) {
 	f := features{
-		ForwardAuth: appcfg.AuthorizationEndpoint != "",
+		ForwardAuth: forwardauth{
+			Enabled: appcfg.AuthorizationEndpoint != "",
+			URL:     appcfg.AuthorizationEndpoint,
+		},
 	}
 	b, _ := json.Marshal(f)
 	w.Write(b)

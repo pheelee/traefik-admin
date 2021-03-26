@@ -47,9 +47,13 @@ input {
   max-width: 800px;
 }
 
+.modal {
+  background-color:var(--primary-bg-color);
+}
 
 .modal-content {
   background-color:var(--primary-bg-color);
+  overflow-y:hidden !important;
 }
 
 .modal-content .add-btn {
@@ -58,16 +62,35 @@ input {
   bottom: 66px
 }
 
+.modal-content .modal-title {
+  height: 25px;
+  font-size: 1.3rem;
+  margin-bottom:10px;
+}
+
+.modal-content .section-title {
+  height: 25px;
+  font-size: 1.2rem;
+  margin-left: 15px;
+  margin-bottom: 10px;
+  padding-top: 10px;
+}
+
+.modal-content .row.input, .modal-content .input-field {
+  margin-bottom:0px;
+}
+
 .modal-footer {
   background-color:var(--secondary-bg-color) !important;
 }
 
-.listview .row, .listview .input-field {
-  margin-bottom: 0px;
-}
 
 .tabs, .tabs .tab a:focus, .tabs .tab a:focus.active {
   background-color: var(--primary-bg-color);
+}
+
+.tab-content {
+  padding-top:80px;
 }
 
 .tabs .tab a:hover, .tabs .tab a.active {

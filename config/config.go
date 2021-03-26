@@ -78,32 +78,36 @@ func (c *Config) ToUserInput(name string) UserInput {
 		HTTPS:         c.HTTP.Routers[name].TLS != nil,
 		ForceTLS:      c.HTTP.containsRouter(name+"-http") && c.HTTP.Routers[name+"-http"].hasMiddleware(REDIRSCHEME+"@file"),
 		HSTS:          c.HTTP.Routers[name].hasMiddleware(HSTS + "@file"),
-		Headers:       []headersInput{},
-		BasicAuth:     []basicAuthInput{},
-		IPRestriction: &ipRestriction{Depth: 0, IPs: []string{}},
+		Headers:       make([]headersInput, 5),
+		BasicAuth:     make([]basicAuthInput, 5),
+		IPRestriction: &ipRestriction{Depth: 0, IPs: make([]string, 5)},
 	}
 	headers, ok := c.HTTP.Middlewares[name+"-headers"]
 	if ok {
+		i := 0
 		for n, v := range headers.Headers.CustomRequestHeaders {
-			u.Headers = append(u.Headers, headersInput{Name: n, Value: v})
+			u.Headers[i] = headersInput{Name: n, Value: v}
+			i++
 		}
 	}
 	auth, ok := c.HTTP.Middlewares[name+"-basicauth"]
 	if ok {
-		for _, entry := range auth.BasicAuth.Users {
+		for i, entry := range auth.BasicAuth.Users {
 			raw := strings.Split(entry, ":")
-			u.BasicAuth = append(u.BasicAuth, basicAuthInput{Username: raw[0], Password: raw[1]})
+			u.BasicAuth[i] = basicAuthInput{Username: raw[0], Password: raw[1]}
 		}
 	}
 	iprestriction, ok := c.HTTP.Middlewares[name+"-iprestrict"]
 	if ok {
-		u.IPRestriction = &ipRestriction{
-			IPs: iprestriction.IPWhiteList.SourceRange,
-		}
 		if iprestriction.IPWhiteList.IPStrategy != nil {
 			u.IPRestriction.Depth = iprestriction.IPWhiteList.IPStrategy.Depth
 		}
-
+		// fill remaining slots with empty strings
+		for i := 0; i < len(u.IPRestriction.IPs); i++ {
+			if len(iprestriction.IPWhiteList.SourceRange) > i {
+				u.IPRestriction.IPs[i] = iprestriction.IPWhiteList.SourceRange[i]
+			}
+		}
 	}
 	return u
 }
@@ -228,18 +232,23 @@ func Create(cfgPath string, name string, c UserInput, o Options) (*Config, error
 	}
 
 	// do we have basic auth?
-	if len(c.BasicAuth) > 0 {
-		cfg.HTTP.Middlewares[name+"-basicauth"] = &Middleware{BasicAuth: BasicAuth{}}
-		for _, ba := range c.BasicAuth {
+	var users []string = make([]string, 0)
+	for _, ba := range c.BasicAuth {
+		if ba.Username != "" {
 			hash, _ := bcrypt.GenerateFromPassword([]byte(ba.Password), bcrypt.DefaultCost)
-			cfg.HTTP.Middlewares[name+"-basicauth"].BasicAuth.Users = append(cfg.HTTP.Middlewares[name+"-basicauth"].BasicAuth.Users, ba.Username+":"+string(hash))
+			users = append(users, ba.Username+":"+string(hash))
 		}
+	}
+	if len(users) > 0 {
+		cfg.HTTP.Middlewares[name+"-basicauth"] = &Middleware{BasicAuth: BasicAuth{}}
+		cfg.HTTP.Middlewares[name+"-basicauth"].BasicAuth.Users = users
 		cfg.HTTP.Routers[name].Middlewares = append(cfg.HTTP.Routers[name].Middlewares, name+"-basicauth")
 	}
 
 	// do we have any ip restrictions?
-	if c.IPRestriction != nil && len(c.IPRestriction.IPs) > 0 {
-		mw := &Middleware{IPWhiteList: IPWhiteList{SourceRange: c.IPRestriction.IPs}}
+	ipr := getNonEmpty(c.IPRestriction.IPs)
+	if c.IPRestriction != nil && len(ipr) > 0 {
+		mw := &Middleware{IPWhiteList: IPWhiteList{SourceRange: ipr}}
 		if c.IPRestriction.Depth > 0 {
 			mw.IPWhiteList.IPStrategy = &IPStrategy{Depth: c.IPRestriction.Depth}
 		}
@@ -302,4 +311,14 @@ func Delete(cfgPath string) error {
 func Exists(cfgPath string) bool {
 	_, err := os.Stat(cfgPath)
 	return err == nil
+}
+
+func getNonEmpty(slice []string) []string {
+	o := make([]string, 0)
+	for _, s := range slice {
+		if s != "" {
+			o = append(o, s)
+		}
+	}
+	return o
 }
