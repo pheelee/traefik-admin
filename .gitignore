@@ -2,3 +2,4 @@ dynamic.d
 webroot
 .vscode
 dist
+__debug_bin
