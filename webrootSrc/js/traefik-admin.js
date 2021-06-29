@@ -103,6 +103,7 @@ var app = new Vue({
                   app.connections.push(config);
                 if (app.editorMode === 'Update')
                   app.connections[app.connections.findIndex(el => el.name === app.editor.name)] = config;
+                  app.applyFilter();
                 M.Modal.getInstance(document.getElementById(senderId)).close();
                 Notify.Success(app.editor.name, "successfully " + app.editorMode.toLowerCase() + "d")
             }, function(response){
@@ -121,10 +122,10 @@ var app = new Vue({
           }})
 
         },
-        edit: function(){
+        edit: function(event){
           var id = event.target.dataset["id"];
           app.editorMode = 'Update';
-          app.editor = Object.assign({},app.connections[id]);
+          app.editor = Object.assign({},app.filter_view[id]);
           M.Modal.getInstance(document.getElementById('editModal')).open();
         },
         applyFilter: function(){
