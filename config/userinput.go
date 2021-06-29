@@ -81,7 +81,7 @@ func (u *UserInput) Validate() Validation {
 		match bool       = true
 		v     Validation = NewValidation()
 	)
-	if match, _ = regexp.MatchString("^[a-zA-Z0-9]{3,32}$", u.Name); !match {
+	if match, _ = regexp.MatchString("^[a-zA-Z0-9-]{3,32}$", u.Name); !match {
 		v.Valid = false
 		v.Errors.Name = "String between 3 and 32 chars required"
 	}
