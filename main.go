@@ -30,7 +30,7 @@ func main() {
 	cfg := appConfig{}
 
 	flag.StringVar(&cfg.ConfigPath, "ConfigPath", "", "path where the dynamic config files getting stored")
-	flag.StringVar(&cfg.WebRoot, "WebRoot", "", "defines the WebRoot containing index.html and static resources")
+	flag.StringVar(&cfg.WebRoot, "WebRoot", "", "defines the WebRoot containing index.html and static resources (for development)")
 	flag.StringVar(&cfg.ConfigOptions.CertResolver, "CertResolver", "", "name of the cert resolver which is configured for traefik, e.g http01 or dns01")
 	flag.StringVar(&cfg.AuthorizationEndpoint, "AuthEndpoint", "", "indieauth authorization endpoint for auth forwarding, e.g https://homeassistant.tld/auth/authorize")
 	flag.StringVar(&cfg.CookieSecret, "CookieSecret", "", "secret to encode session cookie (use strong random string)")
@@ -38,7 +38,7 @@ func main() {
 
 	flag.Parse()
 
-	if cfg.ConfigPath == "" || cfg.WebRoot == "" || cfg.ConfigOptions.CertResolver == "" || cfg.CookieSecret == "" {
+	if cfg.ConfigPath == "" || cfg.ConfigOptions.CertResolver == "" || cfg.CookieSecret == "" {
 		flag.CommandLine.Usage()
 		os.Exit(1)
 	}

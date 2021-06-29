@@ -1,6 +1,9 @@
 package main
 
 import (
+	"crypto/sha256"
+	"embed"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -9,6 +12,7 @@ import (
 	"os"
 	"path"
 	"strings"
+	"sync"
 
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
@@ -18,9 +22,14 @@ import (
 	"github.com/pheelee/traefik-admin/logger"
 )
 
+//go:embed webrootSrc
+var efs embed.FS
+
 var appcfg appConfig
 
 var cookieStore *sessions.CookieStore
+
+var assetHashes sync.Map
 
 func getAll(w http.ResponseWriter, r *http.Request) {
 	var (
@@ -184,11 +193,40 @@ func getFeatures(w http.ResponseWriter, r *http.Request) {
 	w.Write(b)
 }
 
+func embedAsset(next http.Handler, uri string, embed string) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		r.URL.Path = strings.Replace(r.URL.Path, uri, embed, -1)
+		fpath := strings.TrimPrefix(r.URL.Path, "/")
+		b, err := efs.ReadFile(fpath)
+		if err != nil {
+			//TODO: maybe implement more fine grained errors like 404
+			panic(err)
+		}
+		h, ok := assetHashes.Load(fpath)
+		if !ok {
+			m := sha256.New()
+			m.Write(b)
+			h = hex.EncodeToString(m.Sum(nil))
+			assetHashes.Store(fpath, h)
+		}
+		inm := r.Header.Get("If-None-Match")
+		if inm != "" && inm == h.(string) {
+			w.Header().Set("ETag", h.(string))
+			w.WriteHeader(http.StatusNotModified)
+			return
+		}
+		w.Header().Set("Cache-Control", "no-cache")
+		w.Header().Set("ETag", h.(string))
+		next.ServeHTTP(w, r)
+
+	})
+}
+
 // SetupRoutes connects the functions to the endpoints
 func SetupRoutes(cfg appConfig) http.Handler {
+	var fs http.Handler
 	appcfg = cfg
 	mux := mux.NewRouter()
-	fs := http.FileServer(http.Dir(cfg.WebRoot))
 	mux.Use(recovery)
 
 	// setup indieauth
@@ -224,7 +262,6 @@ func SetupRoutes(cfg appConfig) http.Handler {
 		logger.Info("forward-auth middleware not enabled because no authorization endpoint was specified")
 	}
 
-	mux.PathPrefix("/static/").Handler(http.StripPrefix("/static/", fs))
 	cfgmux := mux.PathPrefix("/config").Subrouter()
 	cfgmux.Use(requireAjax)
 	cfgmux.HandleFunc("/", getAll).Methods("GET")
@@ -233,8 +270,23 @@ func SetupRoutes(cfg appConfig) http.Handler {
 	cfgmux.HandleFunc("/{name}", deleteConfig).Methods("DELETE")
 	mux.HandleFunc("/features", getFeatures).Methods("GET")
 
+	if cfg.WebRoot != "" {
+		fs = http.StripPrefix("/static/", http.FileServer(http.Dir(cfg.WebRoot)))
+	} else {
+		fs = embedAsset(http.FileServer(http.FS(efs)), "static", "webrootSrc")
+	}
+	mux.PathPrefix("/static/").Handler(fs)
+
 	mux.PathPrefix("/").HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, path.Join(appcfg.WebRoot, "index.html"))
+		if appcfg.WebRoot != "" {
+			http.ServeFile(w, r, path.Join(appcfg.WebRoot, "index.html"))
+		} else {
+			b, err := efs.ReadFile("webrootSrc/index.html")
+			if err != nil {
+				panic(err)
+			}
+			w.Write(b)
+		}
 	})
 
 	loggedRouter := handlers.LoggingHandler(os.Stdout, mux)
