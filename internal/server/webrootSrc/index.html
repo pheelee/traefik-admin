@@ -51,7 +51,7 @@
               </div>
               <div class="card-action">
                 <a href="#" v-on:click="edit" v-bind:data-id="index">Edit</a>
-                <a href="#" class="red-text" v-on:click="remove" v-bind:data-id="index">Remove</a>
+                <a href="#" class="red-text" v-on:click="remove" v-bind:data-id="con.id">Remove</a>
               </div>
             </div>
         </div>
@@ -219,20 +219,25 @@
         <p class="confirm-text">{{confirmDialog.text}}</p>
       </div>
       <div class="modal-footer">
-        <a href="#!" class="modal-close waves-effect waves-red btn-flat red-text" id="confirmYesBtn">Yes</a>
-        <a href="#!" class="modal-close waves-effect waves-green btn-flat white-text" id="confirmNoBtn">No</a>
+        <a href="#!" class="modal-close waves-effect waves-red btn-flat red-text" v-on:click="confirmDialog.onYes">Yes</a>
+        <a href="#!" class="modal-close waves-effect waves-green btn-flat white-text" v-on:click="confirmDialog.onNo">No</a>
       </div>
     </div>
     </main>
     <footer class="page-footer grey darken-4">
       <div class="container">
-        <div class="left">
+      <div class="row" style="margin-bottom:0px;line-height:50px;">
+        <div class="col m4">
           &copy; {{copyright}}
         </div>
-      <div class="right">
+        <div class="col m4" style="font-size:0.8rem;">
+          Version: {{features.version}}
+        </div>
+      <div class="col m4">
       Made with ❤️, ☕ & <a href="https://materializecss.com/" target="_blank">Materialize</a>
       </div>
       </div>
+    </div>
     </footer>
 
   </div> <!-- end of app -->

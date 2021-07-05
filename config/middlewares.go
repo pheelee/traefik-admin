@@ -8,9 +8,9 @@ import (
 )
 
 const (
-	FORWARDAUTH = "sys-forwardauth"
-	REDIRSCHEME = "sys-redirscheme"
-	HSTS        = "sys-hsts"
+	FORWARDAUTH = "sys-forwardauth@file"
+	REDIRSCHEME = "sys-redirscheme@file"
+	HSTS        = "sys-hsts@file"
 )
 
 // Middleware defines Traefik Middleware
@@ -58,7 +58,7 @@ type IPStrategy struct {
 	Depth int `yaml:"depth,omitempty"`
 }
 
-func (h *Headers) fromInput(c UserInput) {
+func (h *Headers) fromInput(c *UserInput) {
 	h.CustomRequestHeaders = make(map[string]string)
 	for _, uh := range c.Headers {
 		if uh.Name != "" {

@@ -1,6 +1,9 @@
 package config
 
 import (
+	"crypto/rand"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -13,7 +16,10 @@ import (
 
 // Config holds a dynamic traefik config
 type Config struct {
-	HTTP HTTP `yaml:"http"`
+	Path   string `yaml:"-"`
+	id     string `yaml:"-"`
+	loaded bool   `yaml:"-"`
+	HTTP   HTTP   `yaml:"http"`
 }
 
 // HTTP defines the http entry struct of traefik
@@ -49,9 +55,34 @@ type server struct {
 	URL string `yaml:"url"`
 }
 
-// Options defines various static settings for config generation
-type Options struct {
-	CertResolver string
+func (c *Config) Load() error {
+	if !c.loaded {
+		b, err := ioutil.ReadFile(c.Path)
+		if err != nil {
+			return err
+		}
+		if err = yaml.Unmarshal(b, c); err != nil {
+			return err
+		}
+		c.loaded = true
+		return nil
+	}
+	return nil
+}
+
+//Name is the first part of the filename name_hash.yaml
+func (c *Config) Name() string {
+	p := strings.Split(c.Path, "/")
+	name := p[len(p)-1]
+	name = strings.Replace(name, path.Ext(name), "", -1)
+	k := strings.Split(name, "_")
+	return k[0]
+}
+
+func (c *Config) ID() string {
+	p := strings.Split(c.Path, "/")
+	name := p[len(p)-1]
+	return strings.Replace(name, path.Ext(name), "", -1)
 }
 
 func (h *HTTP) containsRouter(name string) bool {
@@ -78,20 +109,25 @@ func (r *Router) hasMiddleware(name string) bool {
 }
 
 //ToUserInput converts a config to the struct used by the frontend
-func (c *Config) ToUserInput(name string) UserInput {
-	u := UserInput{
-		Name:          name,
-		Domain:        strings.TrimSuffix(strings.TrimPrefix(c.HTTP.Routers[name].Rule, "Host(`"), "`)"),
-		Backend:       c.HTTP.Services[name].LoadBalancer.Servers[0].URL,
-		ForwardAuth:   c.HTTP.hasAnyRouterMiddleware(FORWARDAUTH + "@file"),
-		HTTPS:         c.HTTP.Routers[name].TLS != nil,
-		ForceTLS:      c.HTTP.containsRouter(name+"-http") && c.HTTP.Routers[name+"-http"].hasMiddleware(REDIRSCHEME+"@file"),
-		HSTS:          c.HTTP.Routers[name].hasMiddleware(HSTS + "@file"),
+func (c *Config) ToUserInput() (*UserInput, error) {
+	if err := c.Load(); err != nil {
+		return nil, err
+	}
+	id := c.ID()
+	u := &UserInput{
+		ID:            id,
+		Name:          c.Name(),
+		Domain:        strings.TrimSuffix(strings.TrimPrefix(c.HTTP.Routers[id+"-http"].Rule, "Host(`"), "`)"),
+		Backend:       c.HTTP.Services[id].LoadBalancer.Servers[0].URL,
+		ForwardAuth:   c.HTTP.hasAnyRouterMiddleware(FORWARDAUTH),
+		HTTPS:         c.HTTP.containsRouter(id) && c.HTTP.Routers[id].TLS != nil,
+		ForceTLS:      c.HTTP.containsRouter(id+"-http") && c.HTTP.Routers[id+"-http"].hasMiddleware(REDIRSCHEME),
+		HSTS:          c.HTTP.containsRouter(id) && c.HTTP.Routers[id].hasMiddleware(HSTS),
 		Headers:       make([]headersInput, 5),
 		BasicAuth:     make([]basicAuthInput, 5),
 		IPRestriction: &ipRestriction{Depth: 0, IPs: make([]string, 5)},
 	}
-	headers, ok := c.HTTP.Middlewares[name+"-headers"]
+	headers, ok := c.HTTP.Middlewares[id+"-headers"]
 	if ok {
 		i := 0
 		for n, v := range headers.Headers.CustomRequestHeaders {
@@ -99,207 +135,147 @@ func (c *Config) ToUserInput(name string) UserInput {
 			i++
 		}
 	}
-	auth, ok := c.HTTP.Middlewares[name+"-basicauth"]
+	auth, ok := c.HTTP.Middlewares[id+"-basicauth"]
 	if ok {
 		for i, entry := range auth.BasicAuth.Users {
 			raw := strings.Split(entry, ":")
 			u.BasicAuth[i] = basicAuthInput{Username: raw[0], Password: raw[1]}
 		}
 	}
-	iprestriction, ok := c.HTTP.Middlewares[name+"-iprestrict"]
+	iprestriction, ok := c.HTTP.Middlewares[id+"-iprestrict"]
 	if ok {
 		if iprestriction.IPWhiteList.IPStrategy != nil {
 			u.IPRestriction.Depth = iprestriction.IPWhiteList.IPStrategy.Depth
 		}
-		// fill remaining slots with empty strings
 		for i := 0; i < len(u.IPRestriction.IPs); i++ {
 			if len(iprestriction.IPWhiteList.SourceRange) > i {
 				u.IPRestriction.IPs[i] = iprestriction.IPWhiteList.SourceRange[i]
 			}
 		}
 	}
-	return u
+	return u, nil
 }
 
-// New returns an initialized new config
-func New(service string, c UserInput) Config {
-	return Config{
+func FromUserInput(u *UserInput, certresolver string) *Config {
+	c := &Config{
+		id: u.Name + "_" + RandHash(),
 		HTTP: HTTP{
-			Routers: map[string]*Router{
-				service: {
-					Entrypoints: []string{"web"},
-					Service:     service,
-					TLS:         nil,
-					Rule:        fmt.Sprintf("Host(`%s`)", c.Domain),
-				},
-			},
-			Services: map[string]*Service{
-				service: {
-					LoadBalancer: loadbalancer{
-						Servers: []server{
-							{URL: c.Backend},
-						},
-					},
-				},
-			},
+			Routers:     map[string]*Router{},
+			Services:    make(map[string]*Service),
 			Middlewares: make(map[string]*Middleware),
 		},
 	}
-}
-
-// FromFile returns the requested config
-func FromFile(cfgPath string) (*Config, error) {
-	var (
-		b   []byte
-		err error
-		cfg Config
-	)
-	b, err = ioutil.ReadFile(cfgPath)
-	if err != nil {
-		return nil, err
+	// Always add service
+	c.HTTP.Services[c.id] = &Service{
+		LoadBalancer: loadbalancer{
+			Servers: []server{
+				{
+					URL: u.Backend,
+				},
+			},
+		},
 	}
-	if err = yaml.Unmarshal(b, &cfg); err != nil {
-		return nil, err
+	// Always add http router
+	c.HTTP.Routers[c.id+"-http"] = &Router{
+		Entrypoints: []string{"web"},
+		Service:     c.id,
+		Rule:        fmt.Sprintf("Host(`%s`)", u.Domain),
+		Middlewares: []string{},
 	}
-	return &cfg, nil
-}
-
-// GetAllUserInput returns config options for all configs
-func GetAllUserInput(cfgPath string) ([]UserInput, error) {
-	var (
-		configFiles []string
-		configList  []UserInput = []UserInput{}
-		cfg         *Config
-		err         error
-		b           []byte
-	)
-	if configFiles, err = ListNames(cfgPath); err != nil {
-		return nil, err
+	// https redirect middleware if specified
+	if u.ForceTLS {
+		c.HTTP.Routers[c.id+"-http"].Middlewares = append(c.HTTP.Routers[c.id+"-http"].Middlewares, REDIRSCHEME)
 	}
-	for _, c := range configFiles {
-		if b, err = ioutil.ReadFile(path.Join(cfgPath, c+".yaml")); err != nil {
-			return nil, fmt.Errorf("config %s: %s", c, err.Error())
-		}
-		if err = yaml.Unmarshal(b, &cfg); err != nil {
-			return nil, fmt.Errorf("config %s: %s", c, err.Error())
-		}
-		if cfg == nil {
-			return nil, fmt.Errorf("invalid config %s", c)
-		}
-		configList = append(configList, cfg.ToUserInput(c))
-	}
-	return configList, nil
-}
-
-// Create writes a new config
-func Create(cfgPath string, name string, c UserInput, o Options) (*Config, error) {
-	var (
-		b   []byte
-		err error
-	)
-	cfg := New(name, c)
-
-	// add or remove config options based on user inputs
-	switch c.HTTPS {
-	case true:
-		cfg.HTTP.Routers[name].TLS = &routerTLSConfig{CertResolver: o.CertResolver}
-		cfg.HTTP.Routers[name].Entrypoints = []string{"websecure"}
-		cfg.HTTP.Routers[name+"-http"] = &Router{
-			Entrypoints: []string{"web"},
-			Rule:        cfg.HTTP.Routers[name].Rule,
-			Service:     cfg.HTTP.Routers[name].Service,
+	// https router if enabled
+	if u.HTTPS {
+		c.HTTP.Routers[c.id] = &Router{
+			Entrypoints: []string{"websecure"},
+			Rule:        fmt.Sprintf("Host(`%s`)", u.Domain),
+			Service:     c.id,
+			TLS: &routerTLSConfig{
+				CertResolver: certresolver,
+			},
+			Middlewares: []string{},
 		}
 
-		//add redirect middleware
-		if c.ForceTLS {
-			cfg.HTTP.Routers[name+"-http"].Middlewares = append(cfg.HTTP.Routers[name+"-http"].Middlewares, REDIRSCHEME+"@file")
+		if u.HSTS {
+			c.HTTP.Routers[c.id].Middlewares = append(c.HTTP.Routers[c.id].Middlewares, HSTS)
 		}
-		// enable HSTS
-		if c.HSTS {
-			cfg.HTTP.Routers[name].Middlewares = append(cfg.HTTP.Routers[name].Middlewares, HSTS+"@file")
-		}
-	case false:
-		cfg.HTTP.Routers[name].TLS = nil
-		cfg.HTTP.Routers[name].Entrypoints = []string{"web"}
 	}
 
+	// now we have stuff for both routers
 	// add forward auth middleware
-	if c.ForwardAuth {
-		for _, r := range cfg.HTTP.Routers {
-			r.Middlewares = append(r.Middlewares, FORWARDAUTH+"@file")
+	if u.ForwardAuth {
+		for _, r := range c.HTTP.Routers {
+			r.Middlewares = append(r.Middlewares, FORWARDAUTH)
 		}
 	}
 
 	// do we have some headers?
 	headerMW := Headers{}
-	headerMW.fromInput(c)
+	headerMW.fromInput(u)
 	if len(headerMW.CustomRequestHeaders) > 0 {
-		cfg.HTTP.Middlewares[name+"-headers"] = &Middleware{Headers: headerMW}
-		for _, r := range cfg.HTTP.Routers {
-			r.Middlewares = append(r.Middlewares, name+"-headers")
+		c.HTTP.Middlewares[c.id+"-headers"] = &Middleware{Headers: headerMW}
+		for _, r := range c.HTTP.Routers {
+			r.Middlewares = append(r.Middlewares, c.id+"-headers")
 		}
 	}
 
 	// do we have basic auth?
 	var users []string = make([]string, 0)
-	for _, ba := range c.BasicAuth {
+	for _, ba := range u.BasicAuth {
 		if ba.Username != "" {
 			hash, _ := bcrypt.GenerateFromPassword([]byte(ba.Password), bcrypt.DefaultCost)
 			users = append(users, ba.Username+":"+string(hash))
 		}
 	}
 	if len(users) > 0 {
-		cfg.HTTP.Middlewares[name+"-basicauth"] = &Middleware{BasicAuth: BasicAuth{}}
-		cfg.HTTP.Middlewares[name+"-basicauth"].BasicAuth.Users = users
-		cfg.HTTP.Routers[name].Middlewares = append(cfg.HTTP.Routers[name].Middlewares, name+"-basicauth")
+		c.HTTP.Middlewares[c.id+"-basicauth"] = &Middleware{BasicAuth: BasicAuth{}}
+		c.HTTP.Middlewares[c.id+"-basicauth"].BasicAuth.Users = users
+		c.HTTP.Routers[c.id].Middlewares = append(c.HTTP.Routers[c.id].Middlewares, c.id+"-basicauth")
 	}
 
 	// do we have any ip restrictions?
-	ipr := getNonEmpty(c.IPRestriction.IPs)
-	if c.IPRestriction != nil && len(ipr) > 0 {
+	ipr := getNonEmpty(u.IPRestriction.IPs)
+	if u.IPRestriction != nil && len(ipr) > 0 {
 		mw := &Middleware{IPWhiteList: IPWhiteList{SourceRange: ipr}}
-		if c.IPRestriction.Depth > 0 {
-			mw.IPWhiteList.IPStrategy = &IPStrategy{Depth: c.IPRestriction.Depth}
+		if u.IPRestriction.Depth > 0 {
+			mw.IPWhiteList.IPStrategy = &IPStrategy{Depth: u.IPRestriction.Depth}
 		}
-		cfg.HTTP.Middlewares[name+"-iprestrict"] = mw
-		for _, r := range cfg.HTTP.Routers {
-			r.Middlewares = append(r.Middlewares, name+"-iprestrict")
+		c.HTTP.Middlewares[c.id+"-iprestrict"] = mw
+		for _, r := range c.HTTP.Routers {
+			r.Middlewares = append(r.Middlewares, c.id+"-iprestrict")
 		}
 	}
-
-	// Serialize and write the yaml config file
-	if b, err = yaml.Marshal(cfg); err != nil {
-		return nil, err
-	}
-	if err = ioutil.WriteFile(cfgPath, b, 0666); err != nil {
-		return nil, err
-	}
-	return &cfg, nil
+	return c
 }
 
-// ListNames returns all configs in a directory
-func ListNames(cfgPath string) ([]string, error) {
-	var (
-		cfgs []string
-		err  error
-		fi   []os.FileInfo
-	)
-	cfgs = make([]string, 0)
-
-	if fi, err = ioutil.ReadDir(cfgPath); err != nil {
-		return nil, err
-	}
-
-	for _, f := range fi {
-		if !strings.HasPrefix(f.Name(), "sys_") {
-			cfgs = append(cfgs, strings.TrimSuffix(f.Name(), path.Ext(f.Name())))
+func (c *Config) ChangeIdentifier(old string, new string) {
+	c.Load()
+	rKeys := c.RouterKeys()
+	for _, k := range rKeys {
+		c.HTTP.Routers[k].Service = new
+		if strings.HasPrefix(k, old) {
+			nn := strings.Replace(k, old, new, -1)
+			c.HTTP.Routers[nn] = c.HTTP.Routers[k]
+			delete(c.HTTP.Routers, k)
 		}
 	}
-	return cfgs, nil
+	c.HTTP.Services[new] = c.HTTP.Services[old]
+	delete(c.HTTP.Services, old)
+	c.Save()
 }
 
-// Write serializes the config to file
-func (c *Config) Write(path string) error {
+func (c *Config) RouterKeys() []string {
+	var keys []string = make([]string, 0)
+	for k, _ := range c.HTTP.Routers {
+		keys = append(keys, k)
+	}
+	return keys
+}
+
+// Save serializes the config to file
+func (c *Config) Save() error {
 	var (
 		err error
 		b   []byte
@@ -307,7 +283,7 @@ func (c *Config) Write(path string) error {
 	if b, err = yaml.Marshal(c); err != nil {
 		return err
 	}
-	err = ioutil.WriteFile(path, b, 0644)
+	err = ioutil.WriteFile(c.Path, b, 0644)
 	return err
 }
 
@@ -330,4 +306,10 @@ func getNonEmpty(slice []string) []string {
 		}
 	}
 	return o
+}
+
+func RandHash() string {
+	var b []byte = make([]byte, 16)
+	rand.Read(b)
+	return hex.EncodeToString(sha256.New().Sum(b))[:8]
 }

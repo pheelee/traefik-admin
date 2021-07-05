@@ -120,9 +120,16 @@ input {
 }
 
 #confirmModal {
-  height: 20%;
+  height: 50%;
   width: 40%;
 }
+
+@media only screen and (min-width: 600px) {}
+#confirmModal {
+  height: 20%;
+}
+
+
 #confirmModal .confirm-text {
   margin-top: 50px;
 }

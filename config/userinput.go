@@ -4,6 +4,7 @@ import "regexp"
 
 // UserInput hold the data submitted by the api request
 type UserInput struct {
+	ID            string           `json:"id"`
 	Name          string           `json:"name"`
 	Domain        string           `json:"domain"`
 	Backend       string           `json:"backend"`

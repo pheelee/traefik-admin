@@ -1,4 +1,4 @@
-package main
+package server
 
 import (
 	"crypto/sha256"
@@ -22,23 +22,31 @@ import (
 	"github.com/pheelee/traefik-admin/logger"
 )
 
+var VERSION string
+
 //go:embed webrootSrc
 var efs embed.FS
 
-var appcfg appConfig
+var appcfg Config
 
 var cookieStore *sessions.CookieStore
 
 var assetHashes sync.Map
 
-func getAll(w http.ResponseWriter, r *http.Request) {
+type Config struct {
+	WebRoot               string
+	AuthorizationEndpoint string
+	CookieSecret          string
+}
+
+func List(w http.ResponseWriter, r *http.Request) {
 	var (
 		configList []config.UserInput
 		err        error
 		b          []byte
 	)
 
-	if configList, err = config.GetAllUserInput(appcfg.ConfigPath); err != nil {
+	if configList, err = config.Manager.ListUserInputs(); err != nil {
 		panic(err)
 	}
 	if b, err = json.Marshal(configList); err != nil {
@@ -48,15 +56,17 @@ func getAll(w http.ResponseWriter, r *http.Request) {
 	w.Write(b)
 }
 
-func getConfig(w http.ResponseWriter, r *http.Request) {
+func Get(w http.ResponseWriter, r *http.Request) {
 	var (
 		cfg *config.Config
 		err error
 		b   []byte
 	)
-	name := mux.Vars(r)["name"]
-	if cfg, err = config.FromFile(path.Join(appcfg.ConfigPath, name+".yaml")); err != nil {
-		panic(err)
+	id := mux.Vars(r)["id"]
+	cfg = config.Manager.Get(id)
+	if cfg == nil {
+		w.WriteHeader(http.StatusNotFound)
+		return
 	}
 	if b, err = json.Marshal(cfg); err != nil {
 		panic(err)
@@ -65,82 +75,66 @@ func getConfig(w http.ResponseWriter, r *http.Request) {
 	w.Write(b)
 }
 
-func saveConfig(w http.ResponseWriter, r *http.Request) {
+func Save(w http.ResponseWriter, r *http.Request) {
 
 	var (
-		b          []byte
-		err        error
-		cfgopts    config.UserInput
-		validation config.Validation = config.NewValidation()
+		b   []byte
+		err error
+		u   *config.UserInput
+		c   *config.Config
+		v   config.Validation = config.NewValidation()
 	)
-
-	name := mux.Vars(r)["name"]
 	w.Header().Set("content-type", "application/json")
-
-	switch r.Method {
-	case "POST":
-		// check if config already exists
-		if config.Exists(path.Join(appcfg.ConfigPath, name+".yaml")) {
-			validation.Errors.Name = "Duplicate names not allowed"
-			validation.Valid = false
-			b, _ = json.Marshal(validation)
-			w.WriteHeader(http.StatusConflict)
-			w.Write(b)
-			return
-		}
-	case "PUT":
-		// check if config exists
-		if !config.Exists(path.Join(appcfg.ConfigPath, name+".yaml")) {
-			validation.Errors.Name = "Cannot rename config"
-			validation.Valid = false
-			b, _ = json.Marshal(validation)
-			w.WriteHeader(http.StatusNotFound)
-			w.Write(b)
-			return
-		}
-	}
 
 	// Parse User input
 	b, err = ioutil.ReadAll(r.Body)
 	defer r.Body.Close()
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		validation.Valid = false
-		b, _ = json.Marshal(validation)
+		v.Valid = false
+		b, _ = json.Marshal(v)
 		logger.Error(err)
 		w.Write(b)
 		return
 	}
-	if err = json.Unmarshal(b, &cfgopts); err != nil {
+	if err = json.Unmarshal(b, &u); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		validation.Valid = false
-		b, _ = json.Marshal(validation)
+		v.Valid = false
+		b, _ = json.Marshal(v)
 		logger.Error(err)
 		w.Write(b)
 		return
 	}
 
 	// Validate user input
-
-	if validation = cfgopts.Validate(); !validation.Valid {
+	if v = u.Validate(); !v.Valid {
 		w.WriteHeader(http.StatusBadRequest)
-		b, _ = json.Marshal(validation)
+		b, _ = json.Marshal(v)
 		w.Write(b)
 		return
 	}
 
-	cfg, err := config.Create(path.Join(appcfg.ConfigPath, name+".yaml"), name, cfgopts, appcfg.ConfigOptions)
+	switch r.Method {
+	case "POST":
+		c, err = config.Manager.Add(u)
+	case "PUT":
+		c, err = config.Manager.Update(u)
+	}
+
 	if err != nil {
 		panic(err)
 	}
-	cfgJSON := cfg.ToUserInput(name)
-	b, _ = json.Marshal(cfgJSON)
+	u, err = c.ToUserInput()
+	if err != nil {
+		panic(err)
+	}
+	b, _ = json.Marshal(u)
 	w.Write(b)
 }
 
-func deleteConfig(w http.ResponseWriter, r *http.Request) {
-	name := mux.Vars(r)["name"]
-	if err := config.Delete(path.Join(appcfg.ConfigPath, name+".yaml")); err != nil {
+func Delete(w http.ResponseWriter, r *http.Request) {
+	id := mux.Vars(r)["id"]
+	if err := config.Manager.Delete(id); err != nil {
 		panic(err)
 	}
 }
@@ -175,6 +169,7 @@ func requireAjax(next http.Handler) http.Handler {
 
 type features struct {
 	ForwardAuth forwardauth `json:"forwardauth"`
+	Version     string      `json:"version"`
 }
 
 type forwardauth struct {
@@ -182,13 +177,17 @@ type forwardauth struct {
 	URL     string `json:"url"`
 }
 
-func getFeatures(w http.ResponseWriter, r *http.Request) {
+func Features(w http.ResponseWriter, r *http.Request) {
 	f := features{
 		ForwardAuth: forwardauth{
 			Enabled: appcfg.AuthorizationEndpoint != "",
 			URL:     appcfg.AuthorizationEndpoint,
 		},
 	}
+	if VERSION == "" {
+		VERSION = "dev"
+	}
+	f.Version = VERSION
 	b, _ := json.Marshal(f)
 	w.Write(b)
 }
@@ -223,7 +222,7 @@ func embedAsset(next http.Handler, uri string, embed string) http.Handler {
 }
 
 // SetupRoutes connects the functions to the endpoints
-func SetupRoutes(cfg appConfig) http.Handler {
+func SetupRoutes(cfg Config) http.Handler {
 	var fs http.Handler
 	appcfg = cfg
 	mux := mux.NewRouter()
@@ -264,11 +263,11 @@ func SetupRoutes(cfg appConfig) http.Handler {
 
 	cfgmux := mux.PathPrefix("/config").Subrouter()
 	cfgmux.Use(requireAjax)
-	cfgmux.HandleFunc("/", getAll).Methods("GET")
-	cfgmux.HandleFunc("/{name}", getConfig).Methods("GET")
-	cfgmux.HandleFunc("/{name}", saveConfig).Methods("POST", "PUT")
-	cfgmux.HandleFunc("/{name}", deleteConfig).Methods("DELETE")
-	mux.HandleFunc("/features", getFeatures).Methods("GET")
+	cfgmux.HandleFunc("/", List).Methods("GET")
+	cfgmux.HandleFunc("/{id}", Get).Methods("GET")
+	cfgmux.HandleFunc("/{id}", Save).Methods("POST", "PUT")
+	cfgmux.HandleFunc("/{id}", Delete).Methods("DELETE")
+	mux.HandleFunc("/features", Features).Methods("GET")
 
 	if cfg.WebRoot != "" {
 		fs = http.StripPrefix("/static/", http.FileServer(http.Dir(cfg.WebRoot)))

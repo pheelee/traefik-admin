@@ -74,9 +74,14 @@ var app = new Vue({
           enabled: false,
           url: ''
         },
+        version: 'dev'
       },
       copyright: (new Date()).getFullYear() + ' Philipp Ritter',
-      confirmDialog: {title: 'Confirm', text: '', id: 0},
+      confirmDialog: {
+        title: 'Confirm', text: '', id: 0,
+        onYes: function() {},
+        onNo: function() {},
+      },
       endpoint: '',
       message: 'Proxy Connections',
       connections: [],
@@ -91,20 +96,20 @@ var app = new Vue({
           let tabs = document.querySelector("#editModal .tabs");
           var firstId = tabs.querySelectorAll("a")[0].href.split("#")[1];
           (M.Tabs.getInstance(tabs)).select(firstId);
-          if(app.editor.name === '') {app.editor.name='T'}
+          if(app.editor.id === '') {app.editor.id='T'}
             var method = 'POST';
             if(app.editorMode === 'Update'){
               method = 'PUT';
             }
 
-            ajax('config/'+app.editor.name,method,app.editor, function(data){
+            ajax('config/'+app.editor.id,method,app.editor, function(data){
                 let config = JSON.parse(data)
                 if (app.editorMode === 'Create') 
                   app.connections.push(config);
                 if (app.editorMode === 'Update')
-                  app.connections[app.connections.findIndex(el => el.name === app.editor.name)] = config;
-                  app.applyFilter();
+                  app.connections[app.connections.findIndex(el => el.id === app.editor.id)] = config;
                 M.Modal.getInstance(document.getElementById(senderId)).close();
+                app.applyFilter();
                 Notify.Success(app.editor.name, "successfully " + app.editorMode.toLowerCase() + "d")
             }, function(response){
               app.validation = JSON.parse(response);
@@ -113,14 +118,19 @@ var app = new Vue({
         },
         remove: function(event){
           var id = event.target.dataset["id"];
-          var name = app.connections[id].name;
-          Modal.Open({title: 'Delete Config',text: "Do you really want to delete " + name + " ?",id:id, onYes: function(){
-            ajax('config/' + name, 'DELETE', null, function(){
-              app.connections.splice(id, 1);
+          var c = app.connections.filter(e=>e.id == id)[0]
+          var name = c.name;
+          app.confirmDialog.title = 'Delete Config';
+          app.confirmDialog.text  = "Do you really want to delete " + name + " ?";
+          app.confirmDialog.id    = c.id;
+          app.confirmDialog.onYes = function(){
+            ajax('config/' + c.id, 'DELETE', null, function(){
+              app.connections.splice(app.connections.findIndex(e => e.id == app.confirmDialog.id), 1);
+              app.applyFilter();
               Notify.Success(name, "config deleted")
             })
-          }})
-
+          };
+          M.Modal.init(document.getElementById("confirmModal"), {}).open();
         },
         edit: function(event){
           var id = event.target.dataset["id"];
@@ -160,21 +170,6 @@ var app = new Vue({
     },
     Hide: function(){
       this.el.style.display = "none"
-    }
-  }
-
-  var Modal = {
-    Open: function({
-      title='Confirm',
-      text= '',
-      id = 0,
-      onYes= function(){},
-      onNo= function(){}
-    }){
-      app.confirmDialog = {title:title,text: text,id:id};
-      M.Modal.init(document.getElementById("confirmModal"), {}).open();
-      document.getElementById("confirmYesBtn").addEventListener('click', onYes);
-      document.getElementById("confirmNoBtn").addEventListener('click', onNo);
     }
   }
 
