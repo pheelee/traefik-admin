@@ -133,3 +133,10 @@ input {
 #confirmModal .confirm-text {
   margin-top: 50px;
 }
+
+#connectionList .material-icons {
+  display: inline-flex;
+  vertical-align: top;
+  height:24px;
+  width:48px;
+}

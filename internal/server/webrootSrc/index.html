@@ -46,8 +46,8 @@
             <div class="card">
               <div class="card-content white-text">
                 <span class="card-title">{{con.name}}</span>
-                  <p><a v-bind:href="'https://' + con.domain" target="_blank">{{con.domain}}</a></p>
-                  <p class="green-text">{{con.backend}}</p>
+                <p><a v-bind:href="'https://' + con.domain" target="_blank"><i class="material-icons">link</i>{{con.https ? 'https://' : 'http://'}}{{con.domain}}</a></p>
+                <p v-bind:class="{'green-text': con.backend.healthy, 'red-text': !con.backend.healthy}"><i class="material-icons">{{con.backend.healthy ? 'arrow_upwards' : 'arrow_downwards'}}</i>{{con.backend.url}}</p>
               </div>
               <div class="card-action">
                 <a href="#" v-on:click="edit" v-bind:data-id="index">Edit</a>
@@ -86,7 +86,7 @@
                   <span class="helper-text" v-bind:data-error="validation.errors.domain"></span>
               </div>
               <div class="input-field col s12 m6">
-                <input id="backend" type="text" autocomplete="off" class="validate" v-model="editor.backend"  v-bind:class="{invalid: validation.errors.backend != ''}">
+                <input id="backend" type="text" autocomplete="off" class="validate" v-model="editor.backend.url"  v-bind:class="{invalid: validation.errors.backend != ''}">
                 <label for="backend" v-bind:class="{active: editorMode=='Update'}">Backend</label>
                 <span class="helper-text" v-bind:data-error="validation.errors.backend"></span>
 
@@ -146,15 +146,15 @@
             </div>
             <div class="row z-depth-1" style="padding-top:15px;padding-bottom:15px;">
             <div class="section-title">Basic Auth</div>
-            <form class="col s12 m12">
+            <form class="col s12 m12" autocomplete="off">
               <div class="row input" v-for="(entry,index) in editor.basicauth">
                 <div class="input-field col s12 m6">
-                  <input v-bind:id="'basicuser'+index" type="text" autocomplete="off" v-model="entry.Username" v-bind:class="{invalid: validation.errors.basicauth[index].username != ''}">
+                  <input v-bind:id="'basicuser'+index" type="text" v-model="entry.Username" v-bind:class="{invalid: validation.errors.basicauth[index].username != ''}">
                   <label v-bind:for="'basicuser'+index" v-bind:class="{active: editorMode=='Update'}">Username</label>
                   <span class="helper-text" v-bind:data-error="validation.errors.basicauth[index].username"></span>
               </div>
               <div class="input-field col s12 m6">
-                  <input v-bind:id="'basicpass'+index" type="password" autocomplete="off" v-model="entry.Password" v-bind:class="{invalid: validation.errors.basicauth[index].password != ''}">
+                  <input v-bind:id="'basicpass'+index" type="password" autocomplete="new-password" v-model="entry.Password" v-bind:class="{invalid: validation.errors.basicauth[index].password != ''}">
                   <label v-bind:for="'basicpass'+index" v-bind:class="{active: editorMode=='Update'}">Password</label>
                   <span class="helper-text" v-bind:data-error="validation.errors.basicauth[index].password"></span>
               </div>

@@ -49,6 +49,18 @@ func List(w http.ResponseWriter, r *http.Request) {
 	if configList, err = config.Manager.ListUserInputs(); err != nil {
 		panic(err)
 	}
+
+	// perform health checks
+	var wg sync.WaitGroup
+	for i, _ := range configList {
+		wg.Add(1)
+		go func(wg *sync.WaitGroup, b *config.Backend) {
+			defer wg.Done()
+			b.Connect()
+		}(&wg, &configList[i].Backend)
+	}
+	wg.Wait()
+
 	if b, err = json.Marshal(configList); err != nil {
 		panic(err)
 	}
@@ -128,6 +140,7 @@ func Save(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		panic(err)
 	}
+	u.Backend.Connect()
 	b, _ = json.Marshal(u)
 	w.Write(b)
 }

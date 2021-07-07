@@ -118,7 +118,7 @@ func (c *Config) ToUserInput() (*UserInput, error) {
 		ID:            id,
 		Name:          c.Name(),
 		Domain:        strings.TrimSuffix(strings.TrimPrefix(c.HTTP.Routers[id+"-http"].Rule, "Host(`"), "`)"),
-		Backend:       c.HTTP.Services[id].LoadBalancer.Servers[0].URL,
+		Backend:       Backend{URL: c.HTTP.Services[id].LoadBalancer.Servers[0].URL},
 		ForwardAuth:   c.HTTP.hasAnyRouterMiddleware(FORWARDAUTH),
 		HTTPS:         c.HTTP.containsRouter(id) && c.HTTP.Routers[id].TLS != nil,
 		ForceTLS:      c.HTTP.containsRouter(id+"-http") && c.HTTP.Routers[id+"-http"].hasMiddleware(REDIRSCHEME),
@@ -170,7 +170,7 @@ func FromUserInput(u *UserInput, certresolver string) *Config {
 		LoadBalancer: loadbalancer{
 			Servers: []server{
 				{
-					URL: u.Backend,
+					URL: u.Backend.URL,
 				},
 			},
 		},

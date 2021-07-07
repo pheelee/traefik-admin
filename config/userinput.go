@@ -1,13 +1,18 @@
 package config
 
-import "regexp"
+import (
+	"net"
+	"regexp"
+	"strings"
+	"time"
+)
 
 // UserInput hold the data submitted by the api request
 type UserInput struct {
 	ID            string           `json:"id"`
 	Name          string           `json:"name"`
 	Domain        string           `json:"domain"`
-	Backend       string           `json:"backend"`
+	Backend       Backend          `json:"backend"`
 	ForwardAuth   bool             `json:"forwardauth"`
 	HTTPS         bool             `json:"https"`
 	ForceTLS      bool             `json:"forcetls"`
@@ -62,6 +67,21 @@ type header struct {
 	Value string `json:"value"`
 }
 
+type Backend struct {
+	URL     string `json:"url"`
+	Healthy bool   `json:"healthy"`
+}
+
+func (b *Backend) Connect() {
+	addr := strings.Replace(b.URL, "https://", "", -1)
+	addr = strings.Replace(addr, "http://", "", -1)
+	c, err := net.DialTimeout("tcp", addr, 1*time.Second)
+	b.Healthy = err == nil
+	if c != nil {
+		c.Close()
+	}
+}
+
 func NewValidation() Validation {
 	return Validation{
 		Valid: true,
@@ -93,7 +113,7 @@ func (u *UserInput) Validate() Validation {
 	}
 
 	// ToDo: improve validation (regarding ip addresses)
-	if match, _ = regexp.MatchString("^http(s)?:\\/\\/[a-zA-Z0-9.]+:\\d{0,5}$", u.Backend); !match {
+	if match, _ = regexp.MatchString("^http(s)?:\\/\\/[a-zA-Z0-9.]+:\\d{0,5}$", u.Backend.URL); !match {
 		v.Valid = false
 		v.Errors.Backend = "Format: http://192.168.1.12:5000"
 	}

@@ -15,9 +15,10 @@ function ajax(url, method, data, success, failure, progress=true) {
 
 var defaults = {
   editor: {
+    id: '',
     name: '',
     domain: '',
-    backend: '',
+    backend: {url: '', healthy: true},
     forwardauth: false,
     https: true,
     forcetls: true,
@@ -96,12 +97,11 @@ var app = new Vue({
           let tabs = document.querySelector("#editModal .tabs");
           var firstId = tabs.querySelectorAll("a")[0].href.split("#")[1];
           (M.Tabs.getInstance(tabs)).select(firstId);
-          if(app.editor.id === '') {app.editor.id='T'}
+          if(app.editor.id === '') {app.editor.id=app.editor.name}
             var method = 'POST';
             if(app.editorMode === 'Update'){
               method = 'PUT';
             }
-
             ajax('config/'+app.editor.id,method,app.editor, function(data){
                 let config = JSON.parse(data)
                 if (app.editorMode === 'Create') 
@@ -141,7 +141,7 @@ var app = new Vue({
         applyFilter: function(){
           let filter = app.filter_string.toLowerCase();
           app.filter_view = app.connections.filter(c => 
-            c.domain.toLowerCase().includes(filter) || c.name.toLowerCase().includes(filter) || c.backend.toLowerCase().includes(filter)
+            c.domain.toLowerCase().includes(filter) || c.name.toLowerCase().includes(filter) || c.backend.url.toLowerCase().includes(filter)
             );
         },
     }
@@ -198,12 +198,8 @@ var app = new Vue({
         app.connections = JSON.parse(data);
         app.filter_view = app.connections;
         document.getElementById("connectionList").style.display = "block";
-        Loader.Hide();
     });
     ajax('features', 'GET', null, function(data){
       app.features = JSON.parse(data);
-      Loader.Hide();
-    })
-
-    
+    }, function(){}, false)    
   });
