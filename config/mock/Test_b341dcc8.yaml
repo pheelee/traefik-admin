@@ -1,0 +1,34 @@
+http:
+  routers:
+    Test_b341dcc8:
+      entryPoints:
+      - websecure
+      rule: Host(`test.example.com`)
+      service: Test_b341dcc8
+      tls:
+        certResolver: http01
+      middlewares:
+      - sys-hsts@file
+      - sys-forwardauth@file
+      - Test_b341dcc8-iprestrict
+    Test_b341dcc8-http:
+      entryPoints:
+      - web
+      rule: Host(`test.example.com`)
+      service: Test_b341dcc8
+      middlewares:
+      - sys-redirscheme@file
+      - sys-forwardauth@file
+      - Test_b341dcc8-iprestrict
+  services:
+    Test_b341dcc8:
+      loadBalancer:
+        servers:
+        - url: http://127.0.0.1:8090
+  middlewares:
+    Test_b341dcc8-iprestrict:
+      ipWhiteList:
+        sourceRange:
+        - 192.168.1.0/24
+        ipStrategy:
+          depth: 1

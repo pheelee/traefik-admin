@@ -1,0 +1,29 @@
+http:
+  routers:
+    Burg_3dffb53b:
+      entryPoints:
+      - websecure
+      rule: Host(`burg.example.ch`)
+      service: Burg_3dffb53b
+      tls:
+        certResolver: http01
+      middlewares:
+      - Burg_3dffb53b-headers
+    Burg_3dffb53b-http:
+      entryPoints:
+      - web
+      rule: Host(`burg.example.ch`)
+      service: Burg_3dffb53b
+      middlewares:
+      - sys-redirscheme@file
+      - Burg_3dffb53b-headers
+  services:
+    Burg_3dffb53b:
+      loadBalancer:
+        servers:
+        - url: http://192.168.1.39:8123
+  middlewares:
+    Burg_3dffb53b-headers:
+      headers:
+        customRequestHeaders:
+          X-Test-Header: TestValue

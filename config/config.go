@@ -6,7 +6,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io/ioutil"
-	"os"
 	"path"
 	"strings"
 
@@ -157,6 +156,9 @@ func (c *Config) ToUserInput() (*UserInput, error) {
 }
 
 func FromUserInput(u *UserInput, certresolver string) *Config {
+	if !u.Validate().Valid {
+		return nil
+	}
 	c := &Config{
 		id: u.Name + "_" + RandHash(),
 		HTTP: HTTP{
@@ -236,15 +238,17 @@ func FromUserInput(u *UserInput, certresolver string) *Config {
 	}
 
 	// do we have any ip restrictions?
-	ipr := getNonEmpty(u.IPRestriction.IPs)
-	if u.IPRestriction != nil && len(ipr) > 0 {
-		mw := &Middleware{IPWhiteList: IPWhiteList{SourceRange: ipr}}
-		if u.IPRestriction.Depth > 0 {
-			mw.IPWhiteList.IPStrategy = &IPStrategy{Depth: u.IPRestriction.Depth}
-		}
-		c.HTTP.Middlewares[c.id+"-iprestrict"] = mw
-		for _, r := range c.HTTP.Routers {
-			r.Middlewares = append(r.Middlewares, c.id+"-iprestrict")
+	if u.IPRestriction != nil {
+		ipr := spliceEmpty(u.IPRestriction.IPs)
+		if len(ipr) > 0 {
+			mw := &Middleware{IPWhiteList: IPWhiteList{SourceRange: ipr}}
+			if u.IPRestriction.Depth > 0 {
+				mw.IPWhiteList.IPStrategy = &IPStrategy{Depth: u.IPRestriction.Depth}
+			}
+			c.HTTP.Middlewares[c.id+"-iprestrict"] = mw
+			for _, r := range c.HTTP.Routers {
+				r.Middlewares = append(r.Middlewares, c.id+"-iprestrict")
+			}
 		}
 	}
 	return c
@@ -268,7 +272,7 @@ func (c *Config) ChangeIdentifier(old string, new string) {
 
 func (c *Config) RouterKeys() []string {
 	var keys []string = make([]string, 0)
-	for k, _ := range c.HTTP.Routers {
+	for k := range c.HTTP.Routers {
 		keys = append(keys, k)
 	}
 	return keys
@@ -287,18 +291,7 @@ func (c *Config) Save() error {
 	return err
 }
 
-// Delete removes a config from the directory
-func Delete(cfgPath string) error {
-	return os.Remove(cfgPath)
-}
-
-// Exists checks the existence of a config
-func Exists(cfgPath string) bool {
-	_, err := os.Stat(cfgPath)
-	return err == nil
-}
-
-func getNonEmpty(slice []string) []string {
+func spliceEmpty(slice []string) []string {
 	o := make([]string, 0)
 	for _, s := range slice {
 		if s != "" {

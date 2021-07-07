@@ -1,0 +1,29 @@
+http:
+  routers:
+    Test_2a46e0d0:
+      entryPoints:
+      - websecure
+      rule: Host(`test.example.com`)
+      service: Test_2a46e0d0
+      tls:
+        certResolver: http01
+      middlewares:
+      - sys-hsts@file
+      - Test_2a46e0d0-basicauth
+    Test_2a46e0d0-http:
+      entryPoints:
+      - web
+      rule: Host(`test.example.com`)
+      service: Test_2a46e0d0
+      middlewares:
+      - sys-redirscheme@file
+  services:
+    Test_2a46e0d0:
+      loadBalancer:
+        servers:
+        - url: http://1.2.3.4:80
+  middlewares:
+    Test_2a46e0d0-basicauth:
+      basicAuth:
+        users:
+        - test:$2a$10$mY/hEDXhlQEsv0YLH32tjuQMj39vDX/EGRC6xGmUhmjGSjWPixvH6
