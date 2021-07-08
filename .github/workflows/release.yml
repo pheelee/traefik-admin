@@ -21,7 +21,7 @@ jobs:
       uses: actions/checkout@v2
 
     - name: Install all Go dependencies
-      run: go get
+      run: go get ./cmd/traefik-admin
 
     - name: Run Tests
       run: go test ./...
