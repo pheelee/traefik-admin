@@ -1,9 +1,8 @@
-name: Go
+name: Build Release Assets
 
 on:
-  push:
-    tags:
-      - '*'
+  release:
+    types: [ created ]
 
 jobs:
 
