@@ -1,8 +1,9 @@
 name: Go
 
 on:
-  release:
-    types: [ created ]
+  push:
+    tags:
+      - '*'
 
 jobs:
 
@@ -21,6 +22,9 @@ jobs:
 
     - name: Install all Go dependencies
       run: go get
+
+    - name: Run Tests
+      run: go test ./...
 
     - name: Build and Package
       run: ./build.sh
