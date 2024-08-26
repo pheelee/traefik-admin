@@ -1,6 +1,6 @@
 module github.com/pheelee/traefik-admin
 
-go 1.16
+go 1.21
 
 require (
 	github.com/gorilla/handlers v1.5.2
@@ -11,4 +11,10 @@ require (
 	golang.org/x/crypto v0.26.0
 	gopkg.in/yaml.v2 v2.4.0
 	willnorris.com/go/microformats v1.2.0
+)
+
+require (
+	github.com/felixge/httpsnoop v1.0.3 // indirect
+	github.com/gorilla/securecookie v1.1.2 // indirect
+	golang.org/x/net v0.21.0 // indirect
 )
