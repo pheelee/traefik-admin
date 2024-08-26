@@ -234,12 +234,23 @@ func embedAsset(next http.Handler, uri string, embed string) http.Handler {
 	})
 }
 
+func securityHeaders(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("X-Frame-Options", "sameorigin")
+		w.Header().Set("X-Content-Type-Options", "nosniff")
+		w.Header().Set("Content-Security-Policy", "script-src 'self'")
+		w.Header().Set("Referrer-Policy", "no-referrer")
+		w.Header().Set("Content-Security-Policy", "script-src 'self'")
+		next.ServeHTTP(w, r)
+	})
+}
+
 // SetupRoutes connects the functions to the endpoints
 func SetupRoutes(cfg Config) http.Handler {
 	var fs http.Handler
 	appcfg = cfg
 	mux := mux.NewRouter()
-	mux.Use(recovery)
+	mux.Use(recovery, securityHeaders)
 
 	// setup indieauth
 	if appcfg.AuthorizationEndpoint != "" {
