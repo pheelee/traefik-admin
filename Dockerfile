@@ -1,5 +1,5 @@
 ARG BUILD_FROM
-FROM golang:1.16-alpine as builder
+FROM golang:1.17-alpine as builder
 ARG BUILD_ARCH
 
 COPY . /go/src/traefik-admin
@@ -18,7 +18,11 @@ RUN set -ex; \
         CGO_ENABLED=0 GOOS=linux GOARCH=$GOARCH GOARM=$GOARM go build -a -ldflags "-X github.com/pheelee/traefik-admin/internal/server.VERSION=`git describe --tags`" -o dist/traefik-admin ./cmd/traefik-admin
 
 FROM $BUILD_FROM
-ARG TRAEFIK_VERSION=2.4.9
+ARG TRAEFIK_VERSION=2.7.0
+
+LABEL org.opencontainers.image.source=https://github.com/pheelee/traefik-admin
+LABEL org.opencontainers.image.licenses=MIT
+LABEL org.opencontainers.image.description="Reverse Proxy for Web Services in a Hass.io Addon"
 
 EXPOSE 80
 EXPOSE 443
