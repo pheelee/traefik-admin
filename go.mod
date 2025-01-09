@@ -1,11 +1,13 @@
 module github.com/pheelee/traefik-admin
 
-go 1.21
+go 1.23
+
+toolchain go1.23.4
 
 require (
 	github.com/gorilla/handlers v1.5.2
 	github.com/gorilla/mux v1.8.1
-	github.com/gorilla/sessions v1.3.0
+	github.com/gorilla/sessions v1.4.0
 	github.com/hashicorp/golang-lru v1.0.2
 	github.com/peterhellberg/link v1.2.0
 	golang.org/x/crypto v0.32.0
@@ -14,7 +16,7 @@ require (
 )
 
 require (
-	github.com/felixge/httpsnoop v1.0.3 // indirect
+	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/gorilla/securecookie v1.1.2 // indirect
-	golang.org/x/net v0.23.0 // indirect
+	golang.org/x/net v0.34.0 // indirect
 )
