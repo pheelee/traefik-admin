@@ -1,7 +1,6 @@
 module github.com/pheelee/traefik-admin
 
 go 1.23
-
 toolchain go1.23.4
 
 require (
@@ -10,7 +9,7 @@ require (
 	github.com/gorilla/sessions v1.4.0
 	github.com/hashicorp/golang-lru v1.0.2
 	github.com/peterhellberg/link v1.2.0
-	golang.org/x/crypto v0.33.0
+	golang.org/x/crypto v0.35.0
 	gopkg.in/yaml.v2 v2.4.0
 	willnorris.com/go/microformats v1.2.0
 )
