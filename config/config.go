@@ -113,11 +113,18 @@ func (c *Config) ToUserInput() (*UserInput, error) {
 		return nil, err
 	}
 	id := c.ID()
+	backends := make([]Backend, 5)
+	for i, s := range c.HTTP.Services[id].LoadBalancer.Servers {
+		if i >= 5 {
+			break
+		}
+		backends[i] = Backend{URL: s.URL}
+	}
 	u := &UserInput{
 		ID:            id,
 		Name:          c.Name(),
 		Domain:        strings.TrimSuffix(strings.TrimPrefix(c.HTTP.Routers[id+"-http"].Rule, "Host(`"), "`)"),
-		Backend:       Backend{URL: c.HTTP.Services[id].LoadBalancer.Servers[0].URL},
+		Backends:      backends,
 		ForwardAuth:   c.HTTP.hasAnyRouterMiddleware(FORWARDAUTH),
 		HTTPS:         c.HTTP.containsRouter(id) && c.HTTP.Routers[id].TLS != nil,
 		ForceTLS:      c.HTTP.containsRouter(id+"-http") && c.HTTP.Routers[id+"-http"].hasMiddleware(REDIRSCHEME),
@@ -168,13 +175,15 @@ func FromUserInput(u *UserInput, certresolver string) *Config {
 		},
 	}
 	// Always add service
+	servers := make([]server, 0)
+	for _, b := range u.Backends {
+		if b.URL != "" {
+			servers = append(servers, server{URL: b.URL})
+		}
+	}
 	c.HTTP.Services[c.id] = &Service{
 		LoadBalancer: loadbalancer{
-			Servers: []server{
-				{
-					URL: u.Backend.URL,
-				},
-			},
+			Servers: servers,
 		},
 	}
 	// Always add http router

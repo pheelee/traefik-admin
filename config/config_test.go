@@ -64,8 +64,12 @@ var sample1 Config = Config{
 var ui UserInput = UserInput{
 	Name:   "Test",
 	Domain: "test.example.com",
-	Backend: Backend{
-		URL: "http://1.2.3.4:80",
+	Backends: []Backend{
+		{URL: "http://1.2.3.4:80"},
+		{URL: ""},
+		{URL: ""},
+		{URL: ""},
+		{URL: ""},
 	},
 	ForwardAuth: true,
 	HTTPS:       true,

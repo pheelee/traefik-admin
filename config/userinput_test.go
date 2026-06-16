@@ -19,7 +19,7 @@ func TestConnect(t *testing.T) {
 func TestValidation(t *testing.T) {
 	ui.Name = "123.Test"
 	ui.Domain = "1241234"
-	ui.Backend = Backend{URL: "test.example.com"}
+	ui.Backends[0] = Backend{URL: "test.example.com"}
 	ui.BasicAuth[0].Username = "aerg.1241t$"
 	ui.BasicAuth[0].Password = ""
 	ui.BasicAuth = append(ui.BasicAuth, basicAuthInput{})
