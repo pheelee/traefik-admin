@@ -12,7 +12,7 @@ type UserInput struct {
 	ID            string           `json:"id"`
 	Name          string           `json:"name"`
 	Domain        string           `json:"domain"`
-	Backend       Backend          `json:"backend"`
+	Backends      []Backend        `json:"backends"`
 	ForwardAuth   bool             `json:"forwardauth"`
 	HTTPS         bool             `json:"https"`
 	ForceTLS      bool             `json:"forcetls"`
@@ -46,7 +46,7 @@ type Validation struct {
 type ValidationError struct {
 	Name      string      `json:"name"`
 	Domain    string      `json:"domain"`
-	Backend   string      `json:"backend"`
+	Backends  []string    `json:"backends"`
 	BasicAuth []basicAuth `json:"basicauth"`
 	AllowedIP allowedIP   `json:"allowedip"`
 	Headers   []header    `json:"headers"`
@@ -86,7 +86,8 @@ func NewValidation() Validation {
 	return Validation{
 		Valid: true,
 		Errors: ValidationError{
-			Name: "", Domain: "", Backend: "",
+			Name: "", Domain: "",
+			Backends:  make([]string, 5),
 			BasicAuth: make([]basicAuth, 5),
 			AllowedIP: allowedIP{NoProxies: "", IP: make([]string, 5)},
 			Headers:   make([]header, 5),
@@ -113,9 +114,24 @@ func (u *UserInput) Validate() Validation {
 	}
 
 	// ToDo: improve validation (regarding ip addresses)
-	if match, _ = regexp.MatchString("^http(s)?:\\/\\/[a-zA-Z0-9.]+:\\d{0,5}$", u.Backend.URL); !match {
+	backendRegex := `^http(s)?:\/\/[a-zA-Z0-9.]+:\d{0,5}$`
+	atLeastOne := false
+	for i, b := range u.Backends {
+		if b.URL == "" {
+			continue
+		}
+		atLeastOne = true
+		if i >= len(v.Errors.Backends) {
+			break
+		}
+		if match, _ = regexp.MatchString(backendRegex, b.URL); !match {
+			v.Valid = false
+			v.Errors.Backends[i] = "Format: http://192.168.1.12:5000"
+		}
+	}
+	if !atLeastOne {
 		v.Valid = false
-		v.Errors.Backend = "Format: http://192.168.1.12:5000"
+		v.Errors.Backends[0] = "At least one backend URL is required"
 	}
 
 	rex = regexp.MustCompile("^[a-zA-Z0-9]{3,32}$")

@@ -47,7 +47,7 @@
               <div class="card-content white-text">
                 <span class="card-title">{{con.name}}</span>
                 <p><a v-bind:href="'https://' + con.domain" target="_blank"><i class="material-icons">link</i>{{con.https ? 'https://' : 'http://'}}{{con.domain}}</a></p>
-                <p v-bind:class="{'green-text': con.backend.healthy, 'red-text': !con.backend.healthy}"><i class="material-icons">{{con.backend.healthy ? 'arrow_upwards' : 'arrow_downwards'}}</i>{{con.backend.url}}</p>
+                <p v-for="b in con.backends.filter(b => b.url)" v-bind:class="{'green-text': b.healthy, 'red-text': !b.healthy}"><i class="material-icons">{{b.healthy ? 'arrow_upward' : 'arrow_downward'}}</i>{{b.url}}</p>
               </div>
               <div class="card-action">
                 <a href="#" v-on:click="edit" v-bind:data-id="index">Edit</a>
@@ -85,11 +85,10 @@
                   <label for="domain" v-bind:class="{active: editorMode=='Update'}">Domain</label>
                   <span class="helper-text" v-bind:data-error="validation.errors.domain"></span>
               </div>
-              <div class="input-field col s12 m6">
-                <input id="backend" type="text" autocomplete="off" class="validate" v-model="editor.backend.url"  v-bind:class="{invalid: validation.errors.backend != ''}">
-                <label for="backend" v-bind:class="{active: editorMode=='Update'}">Backend</label>
-                <span class="helper-text" v-bind:data-error="validation.errors.backend"></span>
-
+              <div class="input-field col s12 m6" v-for="(b, index) in editor.backends">
+                <input v-bind:id="'backend'+index" type="text" autocomplete="off" class="validate" v-model="b.url" v-bind:class="{invalid: validation.errors.backends[index] != ''}">
+                <label v-bind:for="'backend'+index" v-bind:class="{active: editorMode=='Update' || b.url != ''}">Backend {{index + 1}}</label>
+                <span class="helper-text" v-bind:data-error="validation.errors.backends[index]"></span>
               </div>
             </div>
             <div class="row z-depth-1">

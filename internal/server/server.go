@@ -52,12 +52,17 @@ func List(w http.ResponseWriter, r *http.Request) {
 
 	// perform health checks
 	var wg sync.WaitGroup
-	for i, _ := range configList {
-		wg.Add(1)
-		go func(wg *sync.WaitGroup, b *config.Backend) {
-			defer wg.Done()
-			b.Connect()
-		}(&wg, &configList[i].Backend)
+	for i := range configList {
+		for j := range configList[i].Backends {
+			if configList[i].Backends[j].URL == "" {
+				continue
+			}
+			wg.Add(1)
+			go func(wg *sync.WaitGroup, b *config.Backend) {
+				defer wg.Done()
+				b.Connect()
+			}(&wg, &configList[i].Backends[j])
+		}
 	}
 	wg.Wait()
 
@@ -140,7 +145,11 @@ func Save(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		panic(err)
 	}
-	u.Backend.Connect()
+	for j := range u.Backends {
+		if u.Backends[j].URL != "" {
+			u.Backends[j].Connect()
+		}
+	}
 	b, _ = json.Marshal(u)
 	w.Write(b)
 }
