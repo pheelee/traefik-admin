@@ -65,10 +65,14 @@ npm run vendor
 npm run vendor:check
 ```
 
-The vendor script copies the three distributed JS/CSS files, including their
-license headers, into `internal/server/webrootSrc`. Commit generated asset changes
-alongside manifest and lockfile updates. Go embeds these tracked assets, so Go-only
-development and Docker builds do not need Node or `node_modules`.
+The vendor script copies the Vue 3 production runtime and Materialize JS/CSS,
+including license headers, into `internal/server/webrootSrc`. It also compiles the
+`#app` template in `index.html` into `js/app-render.js`. This lets the UI run under
+the existing `script-src 'self'` policy without runtime template compilation or
+`unsafe-eval`. Keep the end-of-app marker in place and run the vendor script after
+editing the template, package manifest, or lockfile. Commit the generated files.
+Go embeds these tracked assets, so Go-only development and Docker builds do not
+need Node or `node_modules`. Renovate groups Vue and its compiler updates together.
 
 CI and releases check the assets against a clean npm installation. After a
 Renovate frontend update, run the commands above on its branch and commit the
@@ -76,8 +80,20 @@ regenerated files before merging. Renovate is not configured to execute the vend
 script itself. Asset verification is part of the existing required **Tests and API
 smoke check** job, so no branch-protection changes are needed.
 
-Initial tracking preserves Vue 2.6.12 and Materialize 1.0.0. Vue 2 is end of life;
-upgrading to a supported frontend stack requires a separate migration.
+Browser checks use Playwright Chromium against a compiled binary with temporary
+configuration. They cover create/update/delete, validation, filtering, custom
+headers, and execution under the production content security policy:
+
+```bash
+go build -mod=readonly -o /tmp/traefik-admin ./cmd/traefik-admin
+npx playwright install --with-deps chromium
+TRAEFIK_ADMIN_BINARY=/tmp/traefik-admin npm run test:browser
+```
+
+For an existing local Chromium installation, set `CHROMIUM_PATH` to its executable
+instead of downloading a browser. `TRAEFIK_ADMIN_TEST_PORT` overrides the test port
+18099. CI and releases run these browser checks too. Materialize remains at 1.0.0;
+its known security advisories require a separate upgrade or replacement.
 
 ## Build on Homeassistant for testing
 The following section describes the build process for the Home Assistant Operating System installation. For other installation methods please adopt accordingly.

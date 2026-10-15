@@ -67,9 +67,9 @@ var defaults = {
   }
 }
 
-var app = new Vue({
-    el: '#app',
-    data: {
+var app = Vue.createApp({
+    render: TraefikAdminRender,
+    data: function() { return {
       features: {
         forwardauth: {
           enabled: false,
@@ -91,18 +91,18 @@ var app = new Vue({
       validation: JSON.parse(JSON.stringify(defaults.validation)),
       editor: JSON.parse(JSON.stringify(defaults.editor)),
       editorMode: 'Create',
-    },
+    } },
     methods: {
         send: function(senderId){
           let tabs = document.querySelector("#editModal .tabs");
           var firstId = tabs.querySelectorAll("a")[0].href.split("#")[1];
           (M.Tabs.getInstance(tabs)).select(firstId);
-          if(app.editor.id === '') {app.editor.id=app.editor.name}
             var method = 'POST';
             if(app.editorMode === 'Update'){
               method = 'PUT';
             }
-            ajax('config/'+app.editor.id,method,app.editor, function(data){
+            var configId = method === 'POST' ? 'new' : app.editor.id;
+            ajax('config/'+encodeURIComponent(configId),method,app.editor, function(data){
                 let config = JSON.parse(data)
                 if (app.editorMode === 'Create') 
                   app.connections.push(config);
@@ -145,7 +145,7 @@ var app = new Vue({
             );
         },
     }
-  })
+  }).mount('#app')
 
 
   var Notify = {
@@ -189,6 +189,7 @@ var app = new Vue({
       },
       onOpenEnd: function(el) {
         let tabs = el.querySelector(".tabs");
+        if (!tabs) return;
         var firstId = tabs.querySelectorAll("a")[0].href.split("#")[1];
         (M.Tabs.getInstance(tabs)).select(firstId);
       }
