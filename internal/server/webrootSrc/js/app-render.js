@@ -511,12 +511,12 @@ return function render(_ctx, _cache) {
           class: "row",
           style: {"margin-bottom":"0px","line-height":"50px"}
         }, [
-          _createElementVNode("div", { class: "col m4" }, " © " + _toDisplayString(_ctx.copyright), 1 /* TEXT */),
+          _createElementVNode("div", { class: "col s12 m4" }, " © " + _toDisplayString(_ctx.copyright), 1 /* TEXT */),
           _createElementVNode("div", {
-            class: "col m4",
+            class: "col s12 m4",
             style: {"font-size":"0.8rem"}
           }, " Version: " + _toDisplayString(_ctx.features.version), 1 /* TEXT */),
-          _createElementVNode("div", { class: "col m4" }, [
+          _createElementVNode("div", { class: "col s12 m4" }, [
             _createTextVNode(" Made with ❤️, ☕ & "),
             _createElementVNode("a", {
               href: "https://materializeweb.com/",
