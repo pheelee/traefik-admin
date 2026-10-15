@@ -68,6 +68,8 @@ def smoke_test(binary):
                 assert features["forwardauth"]["enabled"] is False
                 assert b"traefik" in request("/").lower()
                 assert b"Vue" in request("/static/js/vue.min.js")
+                assert b"Materialize" in request("/static/js/materialize.min.js")
+                assert b"Materialize" in request("/static/css/vendor/materialize.min.css")
                 assert json.loads(request("/config/")) == []
                 request("/config/", expected_status=400, ajax=False)
 

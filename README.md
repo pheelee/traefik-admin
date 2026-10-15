@@ -33,8 +33,9 @@ check. Configure branch protection to require the CI test and build checks.
 
 Renovate owns dependency update PRs for this repository. Its Dependency Dashboard
 tracks Go modules (including indirect modules), the Go builder image, GitHub
-Actions, and the Traefik release still used by the Dockerfile. Go directive and
-builder-image updates are grouped as **Go toolchain**. Major updates require
+Actions, frontend packages in `package.json`, and the Traefik release still used
+by the Dockerfile. Go directive and builder-image updates are grouped as **Go
+toolchain**. Major updates require
 approval in the dashboard; all PRs require manual merging.
 
 Enable the Renovate GitHub App for this repository if it is not already enabled.
@@ -49,11 +50,34 @@ Downloaded versions use an annotation above their Dockerfile argument:
 ARG TRAEFIK_VERSION=2.11.8
 ```
 
-Vendored frontend libraries do not yet have a package manifest. The externally
-supplied add-on base image and unpinned Alpine packages also need explicit version
-declarations before Renovate can update them. Frontend dependency tracking and
-consolidation of Home Assistant packaging into `hassio-addon-traefik` are separate
-follow-up changes.
+The externally supplied add-on base image and unpinned Alpine packages still need
+explicit version declarations before Renovate can update them. Consolidation of
+Home Assistant packaging into `hassio-addon-traefik` is a separate follow-up change.
+
+## Frontend dependencies
+
+Vue and Materialize are pinned in `package.json` and `package-lock.json` and tracked
+by Renovate. Node 24 and npm are needed to refresh or verify the vendored files:
+
+```bash
+npm ci --ignore-scripts --no-audit --no-fund
+npm run vendor
+npm run vendor:check
+```
+
+The vendor script copies the three distributed JS/CSS files, including their
+license headers, into `internal/server/webrootSrc`. Commit generated asset changes
+alongside manifest and lockfile updates. Go embeds these tracked assets, so Go-only
+development and Docker builds do not need Node or `node_modules`.
+
+CI and releases check the assets against a clean npm installation. After a
+Renovate frontend update, run the commands above on its branch and commit the
+regenerated files before merging. Renovate is not configured to execute the vendor
+script itself. Asset verification is part of the existing required **Tests and API
+smoke check** job, so no branch-protection changes are needed.
+
+Initial tracking preserves Vue 2.6.12 and Materialize 1.0.0. Vue 2 is end of life;
+upgrading to a supported frontend stack requires a separate migration.
 
 ## Build on Homeassistant for testing
 The following section describes the build process for the Home Assistant Operating System installation. For other installation methods please adopt accordingly.
