@@ -96,7 +96,11 @@ docker run --rm --privileged -v ~/.docker:/root/.docker -v `pwd`:/data -v /var/r
 for more information about the homeassistant builder please visit https://github.com/home-assistant/builder
 
 ## Build using Github Actions
-see `.github/workflows/release.yml` in this repo for inspiration
+Push a new version tag after merging to `main` to build and publish validated
+binary archives and their SHA-256 manifest. See [release instructions and the
+add-on runtime contract](docs/releases.md) for commands, architecture names, and
+compatibility requirements. The beta Home Assistant packaging remains here until
+a replacement is available in the add-on repository.
 
 # MIT License
 Copyright 2021-2024 Philipp Ritter
