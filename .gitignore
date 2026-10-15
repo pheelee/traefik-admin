@@ -4,3 +4,5 @@ webroot
 dist
 __debug_bin
 node_modules/
+test-results/
+playwright-report/

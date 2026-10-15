@@ -41,6 +41,12 @@ jobs:
           mkdir "$RUNNER_TEMP/smoke"
           tar -xzf "$DIST_DIR/traefik-admin-linux-amd64.tar.gz" -C "$RUNNER_TEMP/smoke"
           python3 scripts/smoke-test.py "$RUNNER_TEMP/smoke/traefik-admin" --expected-version "$VERSION"
+      - name: Install Chromium for browser checks
+        run: npx playwright install --with-deps chromium
+      - name: Check the Vue UI in Chromium
+        env:
+          TRAEFIK_ADMIN_BINARY: ${{ runner.temp }}/smoke/traefik-admin
+        run: npm run test:browser
 
   build:
     name: Build ${{ matrix.arch }}

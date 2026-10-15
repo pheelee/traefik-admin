@@ -39,6 +39,7 @@ Merge the reviewed changes into `main`, then push a new tag such as `v0.5.3` or
 `v0.5.3-beta.1`. The tag must point to a commit reachable from `main`. The release
 workflow validates frontend assets, dependencies, and tests, builds all three
 architectures, and smoke-tests the packaged amd64 binary and embedded version.
+Chromium also exercises the UI against the packaged binary under its normal CSP.
 Only then does it upload a draft release and publish it. Tags with a suffix are
 marked as prereleases.
 

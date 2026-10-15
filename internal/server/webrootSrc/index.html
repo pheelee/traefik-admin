@@ -42,7 +42,7 @@
         <h6 class="center">add a new config by clicking on the flashing button</h6>
       </div>
       <div class="row" style="display:none" id="connectionList">
-        <div class="proxycfg col s12 m4 l3" v-for="(con, index) in filter_view">
+        <div class="proxycfg col s12 m4 l3" v-for="(con, index) in filter_view" :key="con.id">
             <div class="card">
               <div class="card-content white-text">
                 <span class="card-title">{{con.name}}</span>
@@ -244,8 +244,7 @@
 
     <script src="static/js/materialize.min.js"></script>
     <script src="static/js/vue.min.js"></script>
+    <script src="static/js/app-render.js"></script>
     <script src="static/js/traefik-admin.js"></script>
-    <script>
-    </script>
 </body>
 </html>

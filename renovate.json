@@ -18,6 +18,12 @@
   ],
   "packageRules": [
     {
+      "description": "Keep the Vue runtime and ahead-of-time compiler in sync",
+      "matchManagers": ["npm"],
+      "matchDepNames": ["vue", "@vue/compiler-dom"],
+      "groupName": "Vue"
+    },
+    {
       "description": "Update the Go minimum version and builder together",
       "matchManagers": ["gomod", "dockerfile"],
       "matchDepNames": ["go", "golang"],
