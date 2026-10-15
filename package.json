@@ -1,0 +1,13 @@
+{
+  "name": "traefik-admin-web-assets",
+  "private": true,
+  "description": "Pinned frontend assets embedded by the Go application",
+  "scripts": {
+    "vendor": "node scripts/vendor-assets.mjs",
+    "vendor:check": "node scripts/vendor-assets.mjs --check"
+  },
+  "dependencies": {
+    "materialize-css": "1.0.0",
+    "vue": "2.6.12"
+  }
+}
