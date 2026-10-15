@@ -1,0 +1,55 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  GOTOOLCHAIN: local
+  GOFLAGS: -mod=readonly
+
+jobs:
+  test:
+    name: Tests and API smoke check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+        with:
+          go-version-file: go.mod
+      - run: go mod download && go mod verify
+      - run: go test -count=1 ./...
+      - run: go build -o "$RUNNER_TEMP/traefik-admin" ./cmd/traefik-admin
+      - run: python3 scripts/smoke-test.py "$RUNNER_TEMP/traefik-admin"
+
+  build:
+    name: Build ${{ matrix.arch.name }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        arch:
+          - {name: amd64, goarch: amd64, goarm: ''}
+          - {name: arm64, goarch: arm64, goarm: ''}
+          - {name: armv7, goarch: arm, goarm: '7'}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+        with:
+          go-version-file: go.mod
+      - name: Cross-compile
+        env:
+          CGO_ENABLED: '0'
+          GOOS: linux
+          GOARCH: ${{ matrix.arch.goarch }}
+          GOARM: ${{ matrix.arch.goarm }}
+        run: go build -o "$RUNNER_TEMP/traefik-admin-${{ matrix.arch.name }}" ./cmd/traefik-admin
