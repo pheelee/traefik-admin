@@ -7,6 +7,54 @@
 
 This is a small webinterface to manage dynamic configs for traefik.
 
+## Development checks
+
+Use the Go version declared in `go.mod`. CI reads that file directly; the Docker
+builder uses the same version. From the repository root, run:
+
+```bash
+go mod download
+go mod verify
+go test -mod=readonly -count=1 ./...
+go build -mod=readonly -o /tmp/traefik-admin ./cmd/traefik-admin
+python3 scripts/smoke-test.py /tmp/traefik-admin
+```
+
+The smoke check requires Python 3 and starts its own server on a temporary port,
+using a temporary configuration directory. It checks the UI, static assets,
+request validation, configuration create/read/update/delete, and backend health.
+It requires no Home Assistant instance, external backend, or credentials.
+
+Pull requests also cross-compile Linux binaries for amd64, arm64, and ARMv7.
+These are compilation checks; only the native binary is exercised by the smoke
+check. Configure branch protection to require the CI test and build checks.
+
+## Dependency updates
+
+Renovate owns dependency update PRs for this repository. Its Dependency Dashboard
+tracks Go modules (including indirect modules), the Go builder image, GitHub
+Actions, and the Traefik release still used by the Dockerfile. Go directive and
+builder-image updates are grouped as **Go toolchain**. Major updates require
+approval in the dashboard; all PRs require manual merging.
+
+Enable the Renovate GitHub App for this repository if it is not already enabled.
+The dashboard is created by the app after this configuration reaches the default
+branch. Dependabot version updates are disabled to avoid duplicate PRs; GitHub
+security alerts can remain enabled independently.
+
+Downloaded versions use an annotation above their Dockerfile argument:
+
+```dockerfile
+# renovate: datasource=github-releases depName=traefik/traefik
+ARG TRAEFIK_VERSION=2.11.8
+```
+
+Vendored frontend libraries do not yet have a package manifest. The externally
+supplied add-on base image and unpinned Alpine packages also need explicit version
+declarations before Renovate can update them. Frontend dependency tracking and
+consolidation of Home Assistant packaging into `hassio-addon-traefik` are separate
+follow-up changes.
+
 ## Build on Homeassistant for testing
 The following section describes the build process for the Home Assistant Operating System installation. For other installation methods please adopt accordingly.
 
