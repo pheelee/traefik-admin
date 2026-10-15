@@ -32,19 +32,23 @@ jobs:
           go-version-file: go.mod
       - run: go mod download && go mod verify
       - run: go test -count=1 ./...
-      - run: go build -o "$RUNNER_TEMP/traefik-admin" ./cmd/traefik-admin
-      - run: python3 scripts/smoke-test.py "$RUNNER_TEMP/traefik-admin"
+      - name: Package and smoke-test the release binary
+        env:
+          VERSION: v0.0.0-ci
+          DIST_DIR: ${{ runner.temp }}/release
+        run: |
+          ./build.sh --amd64
+          mkdir "$RUNNER_TEMP/smoke"
+          tar -xzf "$DIST_DIR/traefik-admin-linux-amd64.tar.gz" -C "$RUNNER_TEMP/smoke"
+          python3 scripts/smoke-test.py "$RUNNER_TEMP/smoke/traefik-admin" --expected-version "$VERSION"
 
   build:
-    name: Build ${{ matrix.arch.name }}
+    name: Build ${{ matrix.arch }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        arch:
-          - {name: amd64, goarch: amd64, goarm: ''}
-          - {name: arm64, goarch: arm64, goarm: ''}
-          - {name: armv7, goarch: arm, goarm: '7'}
+        arch: [amd64, arm64, armv7]
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
         with:
@@ -52,10 +56,9 @@ jobs:
       - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
         with:
           go-version-file: go.mod
-      - name: Cross-compile
+      - name: Cross-compile and verify the release archive
         env:
-          CGO_ENABLED: '0'
-          GOOS: linux
-          GOARCH: ${{ matrix.arch.goarch }}
-          GOARM: ${{ matrix.arch.goarm }}
-        run: go build -o "$RUNNER_TEMP/traefik-admin-${{ matrix.arch.name }}" ./cmd/traefik-admin
+          VERSION: v0.0.0-ci
+          DIST_DIR: ${{ runner.temp }}/release
+          BUILD_ARCH: ${{ matrix.arch }}
+        run: ./build.sh "--$BUILD_ARCH"

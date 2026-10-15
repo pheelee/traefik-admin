@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Exercise a compiled admin binary using temporary configuration and local HTTP."""
 
+import argparse
 import json
 from pathlib import Path
 import secrets
@@ -13,7 +14,7 @@ from urllib.error import HTTPError, URLError
 from urllib.request import ProxyHandler, Request, build_opener
 
 
-def smoke_test(binary):
+def smoke_test(binary, expected_version=None):
     # Ignore HTTP proxy settings for this local-only check.
     client = build_opener(ProxyHandler({}))
     with socket.socket() as reservation:
@@ -65,6 +66,8 @@ def smoke_test(binary):
                         time.sleep(0.1)
 
                 assert features["version"]
+                if expected_version is not None:
+                    assert features["version"] == expected_version, features
                 assert features["forwardauth"]["enabled"] is False
                 assert b"traefik" in request("/").lower()
                 assert b"Vue" in request("/static/js/vue.min.js")
@@ -112,6 +115,8 @@ def smoke_test(binary):
 
 
 if __name__ == "__main__":
-    if len(sys.argv) != 2:
-        sys.exit("Usage: python3 scripts/smoke-test.py /path/to/traefik-admin")
-    smoke_test(Path(sys.argv[1]).resolve())
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("binary", type=Path)
+    parser.add_argument("--expected-version")
+    args = parser.parse_args()
+    smoke_test(args.binary.resolve(), args.expected_version)
