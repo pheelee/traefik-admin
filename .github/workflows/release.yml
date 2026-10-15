@@ -1,61 +1,99 @@
 name: Build Release Assets
 
 on:
-  release:
-    types: [ created ]
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing vX.Y.Z tag to release (optional prerelease suffix)
+        required: true
+        type: string
 
 permissions:
-  contents: write
+  contents: read
+
+concurrency:
+  group: release-${{ inputs.tag || github.ref_name }}
+  cancel-in-progress: false
 
 jobs:
-
-  build:
-    name: Build
+  release:
+    name: Validate, package, and publish
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     env:
       GOTOOLCHAIN: local
       GOFLAGS: -mod=readonly
+      RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
     steps:
+      - name: Check out the release tag
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+          fetch-depth: 0
+          persist-credentials: false
 
-    - name: Check out code into the Go module directory
-      uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
-      with:
-        fetch-depth: 0
-        persist-credentials: false
+      - name: Validate release source
+        run: |
+          if [[ ! "$RELEASE_TAG" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-[0-9A-Za-z]+([.-][0-9A-Za-z]+)*)?$ ]]; then
+            echo "Expected vX.Y.Z or vX.Y.Z-prerelease" >&2
+            exit 1
+          fi
+          test "$(git rev-parse HEAD)" = "$(git rev-parse "refs/tags/$RELEASE_TAG^{commit}")"
+          git merge-base --is-ancestor HEAD origin/main
 
-    - name: Set up Node for frontend asset verification
-      uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
-      with:
-        node-version: '24'
-        cache: npm
+      - name: Set up Node for frontend asset verification
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+        with:
+          node-version: '24'
+          cache: npm
 
-    - name: Verify embedded frontend assets
-      run: |
-        npm ci --ignore-scripts --no-audit --no-fund
-        npm run vendor:check
+      - name: Verify embedded frontend assets
+        run: |
+          npm ci --ignore-scripts --no-audit --no-fund
+          npm run vendor:check
 
-    - name: Set up Go from go.mod
-      uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
-      with:
-        go-version-file: go.mod
+      - name: Set up Go from go.mod
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+        with:
+          go-version-file: go.mod
 
-    - name: Install all Go dependencies
-      run: go mod download && go mod verify
+      - name: Verify dependencies and run tests
+        run: |
+          go mod download
+          go mod verify
+          go test -count=1 ./...
 
-    - name: Run Tests
-      run: go test -mod=readonly -count=1 ./...
+      - name: Build and package all architectures
+        env:
+          VERSION: ${{ env.RELEASE_TAG }}
+          DIST_DIR: ${{ runner.temp }}/release
+        run: ./build.sh --all
 
-    - name: API smoke check
-      run: |
-        go build -o "$RUNNER_TEMP/traefik-admin" ./cmd/traefik-admin
-        python3 scripts/smoke-test.py "$RUNNER_TEMP/traefik-admin"
+      - name: Smoke-test the packaged binary and version
+        run: |
+          DIST_DIR="$RUNNER_TEMP/release"
+          mkdir "$RUNNER_TEMP/smoke"
+          tar -xzf "$DIST_DIR/traefik-admin-linux-amd64.tar.gz" -C "$RUNNER_TEMP/smoke"
+          python3 scripts/smoke-test.py "$RUNNER_TEMP/smoke/traefik-admin" --expected-version "$RELEASE_TAG"
 
-    - name: Build and Package
-      run: ./build.sh
-
-    - name: Upload build-artifacts
-      uses: skx/github-action-publish-binaries@44887b225ceca96efd8a912d39c09ad70312af31 # master
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        args: "./dist/*.tar.gz"
+      - name: Upload a new draft and publish only after validation
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          DIST_DIR="$RUNNER_TEMP/release"
+          if gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "Release already exists; refusing to replace its assets" >&2
+            exit 1
+          fi
+          cd "$DIST_DIR"
+          sha256sum -c SHA256SUMS
+          flags=()
+          if [[ "$RELEASE_TAG" == *-* ]]; then flags+=(--prerelease); fi
+          gh release create "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" \
+            --verify-tag --draft --title "$RELEASE_TAG" --generate-notes "${flags[@]}" \
+            traefik-admin-linux-amd64.tar.gz traefik-admin-linux-arm64.tar.gz \
+            traefik-admin-linux-armv7.tar.gz SHA256SUMS
+          gh release edit "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --draft=false
