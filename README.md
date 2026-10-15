@@ -66,7 +66,8 @@ npm run vendor:check
 ```
 
 The vendor script copies the Vue 3 production runtime and Materialize JS/CSS,
-including license headers, into `internal/server/webrootSrc`. It also compiles the
+including color utilities and license headers, into `internal/server/webrootSrc`.
+It also compiles the
 `#app` template in `index.html` into `js/app-render.js`. This lets the UI run under
 the existing `script-src 'self'` policy without runtime template compilation or
 `unsafe-eval`. Keep the end-of-app marker in place and run the vendor script after
@@ -92,8 +93,13 @@ TRAEFIK_ADMIN_BINARY=/tmp/traefik-admin npm run test:browser
 
 For an existing local Chromium installation, set `CHROMIUM_PATH` to its executable
 instead of downloading a browser. `TRAEFIK_ADMIN_TEST_PORT` overrides the test port
-18099. CI and releases run these browser checks too. Materialize remains at 1.0.0;
-its known security advisories require a separate upgrade or replacement.
+18099. CI and releases run these browser checks too, including literal-text
+notification handling and mobile dialog dismissal.
+
+Materialize comes from the maintained `@materializecss/materialize` package. The
+unpatched `materialize-css` 1.0.0 package is no longer used. Dialogs use the native
+HTML `dialog` API, and notifications use the text-only Toast API rather than
+interpolating HTML. The UI requires a browser with native dialog support.
 
 ## Build on Homeassistant for testing
 The following section describes the build process for the Home Assistant Operating System installation. For other installation methods please adopt accordingly.

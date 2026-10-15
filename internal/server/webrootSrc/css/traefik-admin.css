@@ -19,6 +19,85 @@ main {
   flex: 1 0 auto;
 }
 
+#app {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.navbar-fixed {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+nav {
+  background-color: #3f51b5;
+  color: white;
+}
+
+nav .nav-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 64px;
+  padding: 0 1rem;
+}
+
+nav .brand-logo {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1.6rem;
+  color: white;
+}
+
+nav ul {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+nav .input-field {
+  margin: 0;
+}
+
+nav .input-field input {
+  box-sizing: border-box;
+  width: 18rem;
+  padding-left: 2.5rem;
+}
+
+nav .input-field .prefix {
+  position: absolute;
+  left: 0.5rem;
+  width: 24px;
+  overflow: hidden;
+}
+
+nav .modal-trigger {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.5rem;
+  padding: 0 1.25rem;
+  border-radius: 4px;
+  background-color: #26a69a;
+  color: white;
+}
+
+@media (max-width: 600px) {
+  nav .hide-on-small-only {
+    display: none;
+  }
+  .tabs .tab a {
+    padding: 0 0.5rem;
+    font-size: 0.8rem;
+  }
+}
+
 .page-footer {
   width:100%;
   display: flex;
@@ -66,6 +145,10 @@ input {
 
 .modal-content {
   background-color:var(--primary-bg-color);
+  overflow-y: auto;
+  min-height: 0;
+  flex: 1 1 auto;
+  padding: 24px !important;
 }
 
 .modal-content .add-btn {
@@ -94,15 +177,20 @@ input {
 
 .modal-footer {
   background-color:var(--secondary-bg-color) !important;
+  justify-content: flex-end !important;
+  gap: 1rem;
 }
 
+.row > .row, .row > .section-title, .tab-content > div {
+  grid-column: 1 / -1;
+}
 
 .tabs, .tabs .tab a:focus, .tabs .tab a:focus.active {
   background-color: var(--primary-bg-color);
 }
 
 .tab-content {
-  padding-top:80px;
+  padding-top: 1rem;
 }
 
 .tabs .tab a:hover, .tabs .tab a.active {
@@ -118,13 +206,10 @@ input {
 }
 
 #confirmModal {
-  height: 50%;
-  width: 40%;
-}
-
-@media only screen and (min-width: 600px) {}
-#confirmModal {
-  height: 20%;
+  height: auto;
+  min-height: 14rem;
+  max-height: 80vh;
+  width: min(36rem, 90vw);
 }
 
 

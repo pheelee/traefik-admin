@@ -71,3 +71,43 @@ test("manage proxy entries with Vue 3 under the application CSP", async ({ page,
   expect(errors).toEqual([]);
   expect(await page.evaluate(() => window.policyViolations)).toEqual([]);
 });
+
+test("notifications render untrusted markup as literal text", async ({ page }) => {
+  await page.route("https://fonts.googleapis.com/**", route => route.abort());
+  await page.goto("/");
+  await expect(page.locator("footer")).not.toContainText("{{");
+  const sender = '<img src=x onerror="window.toastXss=true">';
+  const message = '<svg onload="window.toastXss=true"></svg>';
+  await page.evaluate(({ sender, message }) => {
+    window.toastXss = false;
+    Notify.Success(sender, message);
+  }, { sender, message });
+  await expect(page.locator(".toast").last()).toHaveText(`${sender} ${message}`);
+  await expect(page.locator(".toast img, .toast svg")).toHaveCount(0);
+  expect(await page.evaluate(() => window.toastXss)).toBe(false);
+});
+
+test("the editor fits mobile screens and resets after native dismissal", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.route("https://fonts.googleapis.com/**", route => route.abort());
+  await page.goto("/");
+  const editor = page.locator("#editModal");
+  await page.locator(".modal-trigger").click();
+  await expect(editor).toBeVisible();
+  const bounds = await editor.boundingBox();
+  expect(bounds.x).toBeGreaterThanOrEqual(0);
+  expect(bounds.x + bounds.width).toBeLessThanOrEqual(390);
+  expect(bounds.y).toBeGreaterThanOrEqual(0);
+  expect(bounds.y + bounds.height).toBeLessThanOrEqual(844);
+  await expect(editor.getByRole("link", { name: "Create", exact: true })).toBeInViewport();
+  for (const name of ["General", "Auth", "Allowed IP", "Headers"]) {
+    await expect(editor.getByRole("link", { name, exact: true })).toBeInViewport({ ratio: 1 });
+  }
+  await editor.locator("#name").fill("DiscardMe");
+  await page.keyboard.press("Escape");
+  await expect(editor).toBeHidden();
+  await page.locator(".modal-trigger").click();
+  await expect(editor.locator("#name")).toHaveValue("");
+  await page.mouse.click(2, 2);
+  await expect(editor).toBeHidden();
+});
