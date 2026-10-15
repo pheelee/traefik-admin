@@ -66,7 +66,7 @@ npm run vendor:check
 ```
 
 The vendor script copies the Vue 3 production runtime and Materialize JS/CSS,
-including color utilities and license headers, into `internal/server/webrootSrc`.
+including license headers, into `internal/server/webrootSrc`.
 It also compiles the
 `#app` template in `index.html` into `js/app-render.js`. This lets the UI run under
 the existing `script-src 'self'` policy without runtime template compilation or
@@ -97,7 +97,9 @@ instead of downloading a browser. `TRAEFIK_ADMIN_TEST_PORT` overrides the test p
 notification handling and mobile dialog dismissal.
 
 Materialize comes from the maintained `@materializecss/materialize` package. The
-unpatched `materialize-css` 1.0.0 package is no longer used. Dialogs use the native
+patched 1.2.x line preserves the classic appearance; Renovate is limited to that
+major version so a redesign requires a separate migration. The unpatched
+`materialize-css` 1.0.0 package is no longer used. Dialogs use the native
 HTML `dialog` API, and notifications use the text-only Toast API rather than
 interpolating HTML. The UI requires a browser with native dialog support.
 
