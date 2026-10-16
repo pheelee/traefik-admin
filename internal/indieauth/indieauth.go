@@ -163,7 +163,7 @@ func (ia *IndieAuth) verifyCode(r *http.Request, code string) (*verifyResp, erro
 		return nil, ErrForbidden
 	}
 	if resp.StatusCode != http.StatusOK {
-		return nil, err
+		return nil, fmt.Errorf("authorization endpoint returned HTTP %d", resp.StatusCode)
 	}
 	vresp := &verifyResp{}
 	if err := json.NewDecoder(resp.Body).Decode(vresp); err != nil {
