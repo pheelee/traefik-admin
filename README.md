@@ -39,7 +39,7 @@ toolchain**. Major updates require
 approval in the dashboard; all PRs require manual merging.
 
 The `Renovate` workflow runs daily and supports manual runs from GitHub Actions.
-Follow [the runner setup](.github/RENOVATE.md) to configure `RENOVATE_TOKEN` and
+Follow [the runner setup](.github/RENOVATE.md) to configure the GitHub App credentials and
 disable the hosted Renovate App for this repository before the first run.
 Dependabot version updates are disabled to avoid duplicate PRs; GitHub security
 alerts can remain enabled independently.
