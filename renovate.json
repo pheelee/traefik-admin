@@ -5,6 +5,7 @@
     "helpers:pinGitHubActionDigests"
   ],
   "dependencyDashboard": true,
+  "semanticCommits": "enabled",
   "automerge": false,
   "customManagers": [
     {
