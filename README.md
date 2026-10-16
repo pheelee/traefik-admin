@@ -15,6 +15,7 @@ builder uses the same version. From the repository root, run:
 ```bash
 go mod download
 go mod verify
+go mod tidy -diff
 go test -mod=readonly -count=1 ./...
 go build -mod=readonly -o /tmp/traefik-admin ./cmd/traefik-admin
 python3 scripts/smoke-test.py /tmp/traefik-admin
@@ -24,6 +25,18 @@ The smoke check requires Python 3 and starts its own server on a temporary port,
 using a temporary configuration directory. It checks the UI, static assets,
 request validation, configuration create/read/update/delete, and backend health.
 It requires no Home Assistant instance, external backend, or credentials.
+
+CI and release checks require `go mod tidy -diff` to succeed, catching unused
+dependencies and incomplete module-path upgrades. YAML tests load existing
+configuration fixtures, check supported fields, and save/reload them without
+changing their meaning. They also cover malformed input and document the current
+parser's last-value-wins handling of duplicate keys; rejecting duplicates in a
+future parser migration must be an explicit compatibility decision.
+
+IndieAuth tests use a local authorization server to verify login redirects,
+session creation, independent login attempts, and rejection of missing, unknown
+or reused states. They also check that failed verification responses create no
+session.
 
 Pull requests also cross-compile Linux binaries for amd64, arm64, and ARMv7.
 These are compilation checks; only the native binary is exercised by the smoke

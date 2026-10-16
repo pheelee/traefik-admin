@@ -1,0 +1,47 @@
+http:
+  routers:
+    compatibility-http:
+      entryPoints: [web]
+      rule: 'Host(`compat.example.com`)'
+      service: compatibility
+      middlewares: [redirect, headers]
+    compatibility-https:
+      entryPoints: [websecure]
+      rule: 'Host(`compat.example.com`)'
+      service: compatibility
+      tls:
+        certResolver: http01
+      middlewares: [headers, basic, restricted, forward]
+  services:
+    compatibility:
+      loadBalancer:
+        servers:
+          - url: 'http://127.0.0.1:8080/path?mode=on&limit=0123'
+          - url: 'https://backend.example.com:8443'
+  middlewares:
+    redirect:
+      redirectScheme:
+        scheme: https
+        permanent: true
+    headers:
+      headers:
+        customRequestHeaders:
+          X-Mode: 'on'
+          X-Enabled: 'yes'
+          X-Code: '0123'
+          X-Unicode: 'Grüezi'
+        stsSeconds: 31536000
+    basic:
+      basicAuth:
+        users: ['alice:$2a$10$synthetic-test-hash']
+        realm: 'Private: area'
+        headerField: X-Authenticated-User
+        removeHeader: true
+    restricted:
+      ipWhiteList:
+        sourceRange: [192.0.2.0/24, '2001:db8::/32']
+        ipStrategy:
+          depth: 2
+    forward:
+      forwardAuth:
+        address: 'http://127.0.0.1:8099/auth'
