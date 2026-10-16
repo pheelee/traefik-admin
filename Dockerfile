@@ -19,7 +19,7 @@ RUN set -ex; \
 
 FROM $BUILD_FROM
 # renovate: datasource=github-releases depName=traefik/traefik
-ARG TRAEFIK_VERSION=2.11.8
+ARG TRAEFIK_VERSION=2.11.59
 
 LABEL org.opencontainers.image.source=https://github.com/pheelee/traefik-admin
 LABEL org.opencontainers.image.licenses=MIT
