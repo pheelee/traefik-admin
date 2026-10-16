@@ -18,6 +18,12 @@
   ],
   "packageRules": [
     {
+      "description": "Keep the classic Materialize styling; major UI migrations are separate work",
+      "matchManagers": ["npm"],
+      "matchDepNames": ["@materializecss/materialize"],
+      "allowedVersions": "<2"
+    },
+    {
       "description": "Keep the Vue runtime and ahead-of-time compiler in sync",
       "matchManagers": ["npm"],
       "matchDepNames": ["vue", "@vue/compiler-dom"],

@@ -12,8 +12,12 @@ if (args.length > 1 || (args.length === 1 && args[0] !== "--check")) {
 const check = args[0] === "--check";
 const assets = [
   ["vue/dist/vue.runtime.global.prod.js", "js/vue.min.js"],
-  ["materialize-css/dist/js/materialize.min.js", "js/materialize.min.js"],
-  ["materialize-css/dist/css/materialize.min.css", "css/vendor/materialize.min.css"],
+  ["@materializecss/materialize/dist/js/materialize.min.js", "js/materialize.min.js"],
+  ["@materializecss/materialize/dist/css/materialize.min.css", "css/vendor/materialize.min.css"],
+  ["@fontsource/material-icons/400.css", "css/vendor/material-icons.css"],
+  ["@fontsource/material-icons/files/material-icons-latin-400-normal.woff2", "css/vendor/files/material-icons-latin-400-normal.woff2"],
+  ["@fontsource/material-icons/files/material-icons-latin-400-normal.woff", "css/vendor/files/material-icons-latin-400-normal.woff"],
+  ["@fontsource/material-icons/LICENSE", "css/vendor/material-icons-LICENSE.txt"],
 ];
 
 async function output(destination, content) {
