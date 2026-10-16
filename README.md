@@ -38,10 +38,11 @@ by the Dockerfile. Go directive and builder-image updates are grouped as **Go
 toolchain**. Major updates require
 approval in the dashboard; all PRs require manual merging.
 
-Enable the Renovate GitHub App for this repository if it is not already enabled.
-The dashboard is created by the app after this configuration reaches the default
-branch. Dependabot version updates are disabled to avoid duplicate PRs; GitHub
-security alerts can remain enabled independently.
+The `Renovate` workflow runs daily and supports manual runs from GitHub Actions.
+Follow [the runner setup](.github/RENOVATE.md) to configure `RENOVATE_TOKEN` and
+disable the hosted Renovate App for this repository before the first run.
+Dependabot version updates are disabled to avoid duplicate PRs; GitHub security
+alerts can remain enabled independently.
 
 Downloaded versions use an annotation above their Dockerfile argument:
 
