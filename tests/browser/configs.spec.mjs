@@ -1,10 +1,17 @@
 import { test, expect } from "@playwright/test";
 
+test.beforeEach(async ({ page, baseURL }) => {
+  // The UI, including icon fonts, must work without third-party network access.
+  const origin = new URL(baseURL).origin;
+  await page.route("**/*", route => {
+    if (new URL(route.request().url()).origin === origin) return route.continue();
+    return route.abort();
+  });
+});
+
 test("manage proxy entries with Vue 3 under the application CSP", async ({ page, baseURL }) => {
   const errors = [];
   page.on("pageerror", error => errors.push(error.message));
-  // Font availability is unrelated to this local workflow.
-  await page.route("https://fonts.googleapis.com/**", route => route.abort());
   await page.addInitScript(() => {
     window.policyViolations = [];
     document.addEventListener("securitypolicyviolation", event => {
@@ -73,7 +80,6 @@ test("manage proxy entries with Vue 3 under the application CSP", async ({ page,
 });
 
 test("notifications render untrusted markup as literal text", async ({ page }) => {
-  await page.route("https://fonts.googleapis.com/**", route => route.abort());
   await page.goto("/");
   await expect(page.locator("footer")).not.toContainText("{{");
   const sender = '<img src=x onerror="window.toastXss=true">';
@@ -89,7 +95,6 @@ test("notifications render untrusted markup as literal text", async ({ page }) =
 
 test("the editor fits mobile screens and resets after native dismissal", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.route("https://fonts.googleapis.com/**", route => route.abort());
   await page.goto("/");
   const editor = page.locator("#editModal");
   await page.locator(".modal-trigger").click();
@@ -110,4 +115,22 @@ test("the editor fits mobile screens and resets after native dismissal", async (
   await expect(editor.locator("#name")).toHaveValue("");
   await page.mouse.click(2, 2);
   await expect(editor).toBeHidden();
+});
+
+test("icons load locally and render glyphs rather than their names", async ({ page }) => {
+  const fontResponse = page.waitForResponse(response => response.url().endsWith("material-icons-latin-400-normal.woff2"));
+  await page.goto("/");
+  expect((await fontResponse).status()).toBe(200);
+  const widths = await page.evaluate(async () => {
+    const faces = await document.fonts.load('24px "Material Icons"', "search");
+    if (!faces.length || faces.some(face => face.status !== "loaded")) {
+      throw new Error("The bundled Material Icons font did not load");
+    }
+    const context = document.createElement("canvas").getContext("2d");
+    context.font = '24px "Material Icons"';
+    return ["search", "link", "arrow_upward", "arrow_downward", "format_list_numbered"]
+      .map(name => ({ name, width: context.measureText(name).width }));
+  });
+  for (const { width } of widths) expect(width).toBeCloseTo(24, 1);
+  await expect(page.locator("nav .material-icons")).toHaveCSS("font-family", '"Material Icons"');
 });

@@ -6,7 +6,7 @@
     <title>Traefik Admin Panel</title>
     <link rel="stylesheet" href="static/css/vendor/materialize.min.css">
     <link rel="stylesheet" href="static/css/traefik-admin.css">
-    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link rel="stylesheet" href="static/css/vendor/material-icons.css">
 </head>
 <body>
     <div id="app">
@@ -47,7 +47,7 @@
               <div class="card-content white-text">
                 <span class="card-title">{{con.name}}</span>
                 <p><a v-bind:href="'https://' + con.domain" target="_blank"><i class="material-icons">link</i>{{con.https ? 'https://' : 'http://'}}{{con.domain}}</a></p>
-                <p v-bind:class="{'green-text': con.backend.healthy, 'red-text': !con.backend.healthy}"><i class="material-icons">{{con.backend.healthy ? 'arrow_upwards' : 'arrow_downwards'}}</i>{{con.backend.url}}</p>
+                <p v-bind:class="{'green-text': con.backend.healthy, 'red-text': !con.backend.healthy}"><i class="material-icons">{{con.backend.healthy ? 'arrow_upward' : 'arrow_downward'}}</i>{{con.backend.url}}</p>
               </div>
               <div class="card-action">
                 <a href="#" v-on:click="edit" v-bind:data-id="index">Edit</a>

@@ -100,7 +100,7 @@ return function render(_ctx, _cache) {
                   _createElementVNode("p", {
                     class: _normalizeClass({'green-text': con.backend.healthy, 'red-text': !con.backend.healthy})
                   }, [
-                    _createElementVNode("i", { class: "material-icons" }, _toDisplayString(con.backend.healthy ? 'arrow_upwards' : 'arrow_downwards'), 1 /* TEXT */),
+                    _createElementVNode("i", { class: "material-icons" }, _toDisplayString(con.backend.healthy ? 'arrow_upward' : 'arrow_downward'), 1 /* TEXT */),
                     _createTextVNode(_toDisplayString(con.backend.url), 1 /* TEXT */)
                   ], 2 /* CLASS */)
                 ]),

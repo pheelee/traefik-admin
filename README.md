@@ -75,6 +75,11 @@ editing the template, package manifest, or lockfile. Commit the generated files.
 Go embeds these tracked assets, so Go-only development and Docker builds do not
 need Node or `node_modules`. Renovate groups Vue and its compiler updates together.
 
+Material Icons are bundled from the pinned `@fontsource/material-icons` package,
+including the font license. The browser loads their CSS and font files from the
+app itself, so icons work without access to Google Fonts or another CDN. Browser
+checks block third-party requests and verify all five icon ligatures used by the UI.
+
 CI and releases check the assets against a clean npm installation. After a
 Renovate frontend update, run the commands above on its branch and commit the
 regenerated files before merging. Renovate is not configured to execute the vendor
