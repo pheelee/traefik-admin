@@ -9,8 +9,8 @@ import (
 	"path"
 	"strings"
 
+	"go.yaml.in/yaml/v3"
 	"golang.org/x/crypto/bcrypt"
-	"gopkg.in/yaml.v2"
 )
 
 // Config holds a dynamic traefik config
@@ -60,16 +60,18 @@ func (c *Config) Load() error {
 		if err != nil {
 			return err
 		}
-		if err = yaml.Unmarshal(b, c); err != nil {
-			return err
+		var parsed Config
+		if err = yaml.Unmarshal(b, &parsed); err != nil {
+			return fmt.Errorf("load %s: %w", c.Path, err)
 		}
+		c.HTTP = parsed.HTTP
 		c.loaded = true
 		return nil
 	}
 	return nil
 }
 
-//Name is the first part of the filename name_hash.yaml
+// Name is the first part of the filename name_hash.yaml
 func (c *Config) Name() string {
 	p := strings.Split(c.Path, "/")
 	name := p[len(p)-1]
@@ -107,7 +109,7 @@ func (r *Router) hasMiddleware(name string) bool {
 	return false
 }
 
-//ToUserInput converts a config to the struct used by the frontend
+// ToUserInput converts a config to the struct used by the frontend
 func (c *Config) ToUserInput() (*UserInput, error) {
 	if err := c.Load(); err != nil {
 		return nil, err

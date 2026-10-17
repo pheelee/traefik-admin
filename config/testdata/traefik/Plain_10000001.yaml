@@ -1,0 +1,11 @@
+http:
+  routers:
+    Plain_10000001-http:
+      entryPoints: [web]
+      rule: Host(`plain.example.test`)
+      service: Plain_10000001
+  services:
+    Plain_10000001:
+      loadBalancer:
+        servers:
+          - url: http://127.0.0.1:18080

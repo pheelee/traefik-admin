@@ -1,0 +1,12 @@
+http:
+  middlewares:
+    sys-redirscheme:
+      redirectScheme:
+        scheme: https
+        permanent: true
+    sys-hsts:
+      headers:
+        stsSeconds: 31536000
+    sys-forwardauth:
+      forwardAuth:
+        address: http://127.0.0.1:18081/auth
