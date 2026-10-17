@@ -1,0 +1,20 @@
+http:
+  routers:
+    Headers_20000002-http:
+      entryPoints: [web]
+      rule: Host(`headers.example.test`)
+      service: Headers_20000002
+      middlewares: [Headers_20000002-headers]
+  services:
+    Headers_20000002:
+      loadBalancer:
+        servers:
+          - url: http://127.0.0.1:18080
+  middlewares:
+    Headers_20000002-headers:
+      headers:
+        customRequestHeaders:
+          X-Mode: "on"
+          X-Enabled: "yes"
+          X-Code: "0123"
+          X-Unicode: "Grüezi"

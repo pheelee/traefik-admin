@@ -1,0 +1,31 @@
+http:
+  routers:
+    scalar:
+      entryPoints: [web]
+      rule: Host(`scalar.example.test`)
+      service: scalar
+      middlewares: [scalars, alias]
+  services:
+    scalar:
+      loadBalancer:
+        servers:
+          - &backend
+            url: http://127.0.0.1:18080
+          - *backend
+  middlewares:
+    legacy-boolean:
+      redirectScheme:
+        scheme: https
+        permanent: yes
+    scalars:
+      headers:
+        customRequestHeaders: &values
+          X-Mode: on
+          X-Enabled: yes
+          X-Code: "0123"
+          X-Unicode: Grüezi
+    alias:
+      headers:
+        customRequestHeaders:
+          <<: *values
+          X-Extra: "true"

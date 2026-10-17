@@ -29,9 +29,19 @@ It requires no Home Assistant instance, external backend, or credentials.
 CI and release checks require `go mod tidy -diff` to succeed, catching unused
 dependencies and incomplete module-path upgrades. YAML tests load existing
 configuration fixtures, check supported fields, and save/reload them without
-changing their meaning. They also cover malformed input and document the current
-parser's last-value-wins handling of duplicate keys; rejecting duplicates in a
-future parser migration must be an explicit compatibility decision.
+changing their meaning. YAML uses the YAML organization's `go.yaml.in/yaml/v3`
+package. Duplicate keys and malformed input are rejected with the file path in
+the error, without partially changing the loaded configuration. Files previously
+using duplicate keys must be corrected; saving can change YAML formatting.
+
+[Reusable mock configurations](config/testdata/README.md) cover HTTP, HTTPS,
+headers, authentication and parser edge cases. CI also runs them against the
+Traefik version in `Dockerfile`, with local mock backends and no external identity
+provider or certificate authority. To repeat that check locally, run:
+
+```bash
+bash scripts/test-traefik-fixtures.sh
+```
 
 IndieAuth tests use a local authorization server to verify login redirects,
 session creation, independent login attempts, and rejection of missing, unknown

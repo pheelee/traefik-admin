@@ -1,9 +1,9 @@
 package config
 
 import (
-	"os"
 	"path/filepath"
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -13,6 +13,13 @@ func TestConfigYAMLRoundTrip(t *testing.T) {
 		t.Fatalf("find legacy fixtures: %v", err)
 	}
 	fixtures = append(fixtures, "testdata/compatibility.yaml")
+	for _, pattern := range []string{"testdata/traefik/*.yaml", "testdata/yaml/*.yaml"} {
+		paths, err := filepath.Glob(pattern)
+		if err != nil || len(paths) == 0 {
+			t.Fatalf("find fixtures %s: %v", pattern, err)
+		}
+		fixtures = append(fixtures, paths...)
+	}
 	for _, fixture := range fixtures {
 		t.Run(filepath.Base(fixture), func(t *testing.T) {
 			original := Config{Path: fixture}
@@ -82,38 +89,47 @@ func TestConfigYAMLCompatibilityFields(t *testing.T) {
 	}
 }
 
-func TestConfigLoadRejectsMalformedYAML(t *testing.T) {
-	for name, contents := range map[string]string{
-		"syntax":      "http: [\n",
-		"router type": "http:\n  routers: not-a-map\n",
-		"TLS type":    "http:\n  routers:\n    test:\n      tls: [invalid]\n",
-	} {
-		t.Run(name, func(t *testing.T) {
-			file := filepath.Join(t.TempDir(), "invalid.yaml")
-			if err := os.WriteFile(file, []byte(contents), 0600); err != nil {
-				t.Fatal(err)
+func TestConfigLoadRejectsInvalidFixtures(t *testing.T) {
+	fixtures, err := filepath.Glob("testdata/invalid/*.yaml")
+	if err != nil || len(fixtures) == 0 {
+		t.Fatalf("find invalid fixtures: %v", err)
+	}
+	for _, fixture := range fixtures {
+		t.Run(filepath.Base(fixture), func(t *testing.T) {
+			before := HTTP{Routers: map[string]*Router{"existing": {Rule: "unchanged"}}}
+			c := Config{Path: fixture, HTTP: HTTP{Routers: map[string]*Router{"existing": {Rule: "unchanged"}}}}
+			err := c.Load()
+			if err == nil || c.loaded {
+				t.Fatalf("invalid file accepted or marked loaded: %v", err)
 			}
-			c := Config{Path: file}
-			if err := c.Load(); err == nil || c.loaded {
-				t.Fatalf("malformed file accepted or marked loaded: %v", err)
+			if !strings.Contains(err.Error(), fixture) {
+				t.Fatalf("error does not identify the invalid file: %v", err)
+			}
+			if !reflect.DeepEqual(c.HTTP, before) {
+				t.Fatal("invalid YAML partially changed the configuration")
 			}
 		})
 	}
 }
 
-func TestConfigLoadDuplicateKeyCompatibility(t *testing.T) {
-	// yaml.v2 accepts duplicate keys and keeps the last value. A migration to a
-	// stricter parser must make that compatibility change explicit.
-	file := filepath.Join(t.TempDir(), "duplicate.yaml")
-	contents := "http:\n  routers:\n    test:\n      rule: first\n      rule: second\n"
-	if err := os.WriteFile(file, []byte(contents), 0600); err != nil {
-		t.Fatal(err)
-	}
-	c := Config{Path: file}
+func TestConfigYAMLScalarsAndAliases(t *testing.T) {
+	c := Config{Path: "testdata/yaml/scalars-and-aliases.yaml"}
 	if err := c.Load(); err != nil {
 		t.Fatal(err)
 	}
-	if c.HTTP.Routers["test"].Rule != "second" {
-		t.Fatal("duplicate-key handling changed")
+	if !c.HTTP.Middlewares["legacy-boolean"].RedirectScheme.Permanent {
+		t.Fatal("legacy YAML boolean changed meaning in a typed bool field")
+	}
+	values := map[string]string{"X-Mode": "on", "X-Enabled": "yes", "X-Code": "0123", "X-Unicode": "Grüezi"}
+	if !reflect.DeepEqual(c.HTTP.Middlewares["scalars"].Headers.CustomRequestHeaders, values) {
+		t.Fatal("YAML-looking strings changed meaning")
+	}
+	values["X-Extra"] = "true"
+	if !reflect.DeepEqual(c.HTTP.Middlewares["alias"].Headers.CustomRequestHeaders, values) {
+		t.Fatal("YAML merge key/alias changed meaning")
+	}
+	servers := c.HTTP.Services["scalar"].LoadBalancer.Servers
+	if len(servers) != 2 || servers[0].URL != "http://127.0.0.1:18080" || servers[0] != servers[1] {
+		t.Fatal("YAML sequence alias changed backend addresses")
 	}
 }
