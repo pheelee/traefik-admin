@@ -71,6 +71,26 @@ func TestTraefikFixtures(t *testing.T) {
 		}
 	}
 
+	// Generated multi-backend config must route traffic to both servers.
+	multiInput := &UserInput{Name: "Multiple", Domain: "multi.example.test"}
+	for _, identity := range []string{"one", "two"} {
+		identity := identity
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("X-Test-Backend", identity)
+			w.WriteHeader(http.StatusOK)
+		}))
+		t.Cleanup(server.Close)
+		multiInput.Backends = append(multiInput.Backends, Backend{URL: server.URL})
+	}
+	multi := FromUserInput(multiInput, "")
+	if multi == nil {
+		t.Fatal("multiple backend config rejected")
+	}
+	multi.Path = filepath.Join(dynamic, multi.id+".yaml")
+	if err := multi.Save(); err != nil {
+		t.Fatal(err)
+	}
+
 	web, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		t.Fatal(err)
@@ -151,6 +171,26 @@ func TestTraefikFixtures(t *testing.T) {
 		}
 		time.Sleep(100 * time.Millisecond)
 	}
+
+	t.Run("multiple-backend-load-balancing", func(t *testing.T) {
+		seen := map[string]int{}
+		for i := 0; i < 20; i++ {
+			response, err := request("multi.example.test", false, false, false)
+			if err != nil {
+				t.Fatal(err)
+			}
+			response.Body.Close()
+			if response.StatusCode != http.StatusOK {
+				t.Fatalf("route returned %d", response.StatusCode)
+			}
+			seen[response.Header.Get("X-Test-Backend")]++
+		}
+		if seen["one"] == 0 || seen["two"] == 0 || seen[""] != 0 {
+			t.Fatalf("both backends must receive traffic: %v", seen)
+		}
+		t.Logf("20 real Traefik requests: %v", seen)
+	})
+
 	for _, fixture := range fixtureCases(t) {
 		t.Run(fixture.File, func(t *testing.T) {
 			response, err := request(fixture.Domain, fixture.HTTPS, true, true)

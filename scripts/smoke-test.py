@@ -78,14 +78,17 @@ def smoke_test(binary, expected_version=None):
 
                 entry = {
                     "name": "SmokeTest", "domain": "smoke.example.com",
-                    "backend": {"url": f"http://127.0.0.1:{port}"},
+                    "backends": [{"url": f"http://127.0.0.1:{port}"},
+                                 {"url": f"http://localhost:{port}"}],
                     "https": False, "forcetls": False,
                 }
                 invalid = dict(entry, name="!")
                 assert json.loads(request("/config/new", "POST", invalid, 400))["valid"] is False
                 created = json.loads(request("/config/new", "POST", entry))
                 config_id = created["id"]
-                assert created["backend"]["healthy"] is True
+                assert len(created["backends"]) == 5
+                assert all(b["healthy"] for b in created["backends"][:2])
+                assert all(not b["url"] for b in created["backends"][2:])
                 assert (configs / f"{config_id}.yaml").is_file()
                 assert json.loads(request("/config/"))[0]["id"] == config_id
                 stored = json.loads(request(f"/config/{config_id}"))
@@ -95,6 +98,7 @@ def smoke_test(binary, expected_version=None):
                     f"/config/{config_id}", "PUT", dict(entry, id=config_id, domain="updated.example.com")
                 ))
                 assert updated["domain"] == "updated.example.com"
+                assert [b["url"] for b in updated["backends"][:2]] == [b["url"] for b in entry["backends"]]
                 request(f"/config/{updated['id']}", "DELETE")
                 assert json.loads(request("/config/")) == []
                 assert not list(configs.glob("SmokeTest_*.yaml"))

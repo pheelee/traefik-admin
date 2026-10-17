@@ -129,7 +129,7 @@ func TestSetForwardAuth(t *testing.T) {
 	c, _ := M.Add(&UserInput{
 		Name:        "Test",
 		Domain:      "test.example.com",
-		Backend:     Backend{URL: "http://1.2.3.4:80"},
+		Backends:    []Backend{{URL: "http://1.2.3.4:80"}},
 		ForwardAuth: true,
 	})
 	err := M.SetForwardAuth(Remove)

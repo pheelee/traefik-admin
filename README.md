@@ -132,6 +132,22 @@ major version so a redesign requires a separate migration. The unpatched
 HTML `dialog` API, and notifications use the text-only Toast API rather than
 interpolating HTML. The UI requires a browser with native dialog support.
 
+## Multiple backends
+
+Each proxy entry supports up to five non-empty HTTP/HTTPS backend URLs. Empty
+rows are ignored. Traefik distributes requests across the configured servers;
+the admin displays a separate TCP reachability indicator for each server. These
+indicators do not configure Traefik health checks or guarantee failover.
+
+Existing YAML configs with more than five servers remain fully visible. Saving
+is rejected until surplus backend rows are explicitly cleared; loading a config
+never truncates its server list.
+
+The config API now uses `"backends": [{"url": "http://127.0.0.1:8080"}]`
+in place of `"backend": {"url": "http://127.0.0.1:8080"}`. Validation errors use
+the corresponding `errors.backends` array. API clients must adopt this format;
+existing Traefik YAML files require no migration.
+
 ## Build on Homeassistant for testing
 The following section describes the build process for the Home Assistant Operating System installation. For other installation methods please adopt accordingly.
 

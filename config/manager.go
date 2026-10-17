@@ -38,6 +38,9 @@ func (m *ConfigManager) Add(u *UserInput) (*Config, error) {
 
 // Update must search a config by hash, delete it and write the new config to file
 func (m *ConfigManager) Update(u *UserInput) (*Config, error) {
+	if !u.Validate().Valid {
+		return nil, fmt.Errorf("invalid userinput")
+	}
 	if err := m.Delete(u.ID); err != nil {
 		return nil, err
 	}

@@ -4,18 +4,20 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 )
 
 type fixtureCase struct {
-	File          string `json:"file"`
-	Domain        string `json:"domain"`
-	HTTPS         bool   `json:"https"`
-	ForceTLS      bool   `json:"forcetls"`
-	HSTS          bool   `json:"hsts"`
-	ForwardAuth   bool   `json:"forwardauth"`
-	BasicAuthUser string `json:"basicAuthUser"`
+	Backends      []string `json:"backends"`
+	File          string   `json:"file"`
+	Domain        string   `json:"domain"`
+	HTTPS         bool     `json:"https"`
+	ForceTLS      bool     `json:"forcetls"`
+	HSTS          bool     `json:"hsts"`
+	ForwardAuth   bool     `json:"forwardauth"`
+	BasicAuthUser string   `json:"basicAuthUser"`
 }
 
 func fixtureCases(t *testing.T) []fixtureCase {
@@ -42,8 +44,21 @@ func TestTraefikFixtureUserInputs(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
+			expectedBackends := fixture.Backends
+			if len(expectedBackends) == 0 {
+				expectedBackends = []string{"http://127.0.0.1:18080"}
+			}
+			var actualBackends []string
+			for _, b := range u.Backends {
+				if b.URL != "" {
+					actualBackends = append(actualBackends, b.URL)
+				}
+			}
+			if !reflect.DeepEqual(actualBackends, expectedBackends) {
+				t.Fatalf("backend addresses changed: %v", actualBackends)
+			}
 			if u.ID != strings.TrimSuffix(fixture.File, ".yaml") || u.Domain != fixture.Domain ||
-				u.Backend.URL != "http://127.0.0.1:18080" || u.HTTPS != fixture.HTTPS ||
+				u.Backends[0].URL != "http://127.0.0.1:18080" || u.HTTPS != fixture.HTTPS ||
 				u.ForceTLS != fixture.ForceTLS || u.HSTS != fixture.HSTS || u.ForwardAuth != fixture.ForwardAuth ||
 				u.BasicAuth[0].Username != fixture.BasicAuthUser {
 				t.Fatalf("fixture does not produce its expected UI settings: %+v", u)

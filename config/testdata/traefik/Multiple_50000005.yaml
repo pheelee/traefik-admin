@@ -1,0 +1,12 @@
+http:
+  routers:
+    Multiple_50000005-http:
+      entryPoints: [web]
+      rule: Host(`multiple.example.test`)
+      service: Multiple_50000005
+  services:
+    Multiple_50000005:
+      loadBalancer:
+        servers:
+          - url: http://127.0.0.1:18080
+          - url: http://127.0.0.1:18082

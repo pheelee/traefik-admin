@@ -11,6 +11,7 @@ Runtime backends are loopback placeholders. The Basic Auth user `test` and passw
 | `traefik/Headers_20000002.yaml`           | Request headers containing YAML-looking strings and Unicode                                             |
 | `traefik/Secure_30000003.yaml`            | HTTP-to-HTTPS redirect, TLS, HSTS and Basic Auth                                                        |
 | `traefik/Forward_40000004.yaml`           | Forward Auth allow/deny behavior                                                                        |
+| `traefik/Multiple_50000005.yaml` | Multiple backend addresses and ordering |
 | `traefik/sys_middlewares.yaml`            | Shared middleware used by those routes                                                                  |
 | `traefik/cases.json`                      | Expected domains, feature flags and UI interpretation                                                   |
 | `yaml/scalars-and-aliases.yaml`           | Scalar strings, anchors, sequence aliases and merge keys                                                |
@@ -48,7 +49,8 @@ and auth addresses to temporary local mock servers, saves them with the admin
 encoder, and gives those files to the real Traefik file provider. It exercises
 HTTP routing, exact path/query preservation, header values, HTTPS redirects,
 TLS with Traefik's generated test certificate, HSTS, Basic Auth denial/acceptance
-and credential removal, and Forward Auth denial/acceptance. Listeners bind to
+and credential removal, Forward Auth denial/acceptance, and a generated
+two-server route that must send requests to both mock backends. Listeners bind to
 loopback and processes/files are removed after the test.
 
 The generic Go suite skips real-engine checks when `TRAEFIK_BINARY` is unset;
