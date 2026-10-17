@@ -172,6 +172,29 @@ func TestForbiddenVerificationDoesNotCreateSessionAndConsumesState(t *testing.T)
 	}
 }
 
+func TestLoginStateCacheEvictsOldestPendingAttempt(t *testing.T) {
+	ia, requests := newTestAuth(t, http.StatusOK)
+	states := make([]string, 65)
+	for i := range states {
+		states[i] = beginLogin(t, ia, fmt.Sprintf("/pending/%d", i))
+	}
+	// The 64-entry cache bounds pending state storage; an evicted state must
+	// never reach verification or create an authenticated session.
+	requireInvalidState(t, ia, states[0])
+	if requests.Load() != 0 {
+		t.Fatal("evicted state reached the authorization endpoint")
+	}
+	for _, i := range []int{1, 64} {
+		w := callback(ia, states[i])
+		if w.Code != http.StatusTemporaryRedirect || w.Header().Get("Location") != fmt.Sprintf("https://app.example/pending/%d", i) {
+			t.Fatalf("retained state %d did not preserve its redirect", i)
+		}
+	}
+	if requests.Load() != 2 {
+		t.Fatalf("verification requests = %d, want 2", requests.Load())
+	}
+}
+
 func TestNonOKVerificationDoesNotAuthenticate(t *testing.T) {
 	for _, status := range []int{http.StatusBadRequest, http.StatusUnauthorized, http.StatusInternalServerError} {
 		t.Run(fmt.Sprint(status), func(t *testing.T) {

@@ -14,7 +14,7 @@ import (
 	"strings"
 
 	"github.com/gorilla/sessions"
-	lru "github.com/hashicorp/golang-lru"
+	lru "github.com/hashicorp/golang-lru/v2"
 	"github.com/peterhellberg/link"
 	"willnorris.com/go/microformats"
 )
@@ -70,7 +70,7 @@ type IndieAuth struct {
 	me           string
 	authEndpoint string
 	store        *sessions.CookieStore
-	cache        *lru.Cache
+	cache        *lru.Cache[string, string]
 
 	// ClientID will try to guess the client ID from the request by default
 	ClientID func(r *http.Request) string
@@ -80,7 +80,7 @@ type IndieAuth struct {
 
 // New initializes an IndieAuth auth manager, the `Middleware` shortcut is the preferred API unless you want fine-grained configuration.
 func New(store *sessions.CookieStore, me string, authEndpoint string) (*IndieAuth, error) {
-	c, err := lru.New(64)
+	c, err := lru.New[string, string](64)
 	if err != nil {
 		return nil, err
 	}
@@ -210,7 +210,7 @@ func (ia *IndieAuth) RedirectHandler(w http.ResponseWriter, r *http.Request) {
 		session.Save(r, w)
 
 		// Redirect the user to the page requested before the login
-		http.Redirect(w, r, p.(string), http.StatusTemporaryRedirect)
+		http.Redirect(w, r, p, http.StatusTemporaryRedirect)
 
 	default:
 		w.WriteHeader(http.StatusMethodNotAllowed)
