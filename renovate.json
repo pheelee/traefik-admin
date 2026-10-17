@@ -1,6 +1,51 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
-    "config:recommended"
+    "config:recommended",
+    "helpers:pinGitHubActionDigests"
+  ],
+  "dependencyDashboard": true,
+  "semanticCommits": "enabled",
+  "automerge": false,
+  "customManagers": [
+    {
+      "customType": "regex",
+      "managerFilePatterns": ["/^Dockerfile$/"],
+      "matchStrings": [
+        "# renovate: datasource=(?<datasource>\\S+) depName=(?<depName>\\S+)\\s+ARG \\w+_VERSION=(?<currentValue>[^\\s]+)"
+      ],
+      "extractVersionTemplate": "^v?(?<version>\\d+\\.\\d+\\.\\d+)$"
+    }
+  ],
+  "packageRules": [
+    {
+      "description": "Keep the classic Materialize styling; major UI migrations are separate work",
+      "matchManagers": ["npm"],
+      "matchDepNames": ["@materializecss/materialize"],
+      "allowedVersions": "<2"
+    },
+    {
+      "description": "Keep the Vue runtime and ahead-of-time compiler in sync",
+      "matchManagers": ["npm"],
+      "matchDepNames": ["vue", "@vue/compiler-dom"],
+      "groupName": "Vue"
+    },
+    {
+      "description": "Update the Go minimum version and builder together",
+      "matchManagers": ["gomod", "dockerfile"],
+      "matchDepNames": ["go", "golang"],
+      "groupName": "Go toolchain",
+      "rangeStrategy": "bump"
+    },
+    {
+      "description": "Track indirect modules as well as direct dependencies",
+      "matchManagers": ["gomod"],
+      "matchDepTypes": ["indirect"],
+      "enabled": true
+    },
+    {
+      "matchUpdateTypes": ["major"],
+      "dependencyDashboardApproval": true
+    }
   ]
 }

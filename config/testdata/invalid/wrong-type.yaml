@@ -1,0 +1,4 @@
+http:
+  routers:
+    test:
+      tls: [invalid]

@@ -1,0 +1,25 @@
+http:
+  routers:
+    Secure_30000003-http:
+      entryPoints: [web]
+      rule: Host(`secure.example.test`)
+      service: Secure_30000003
+      middlewares: [sys-redirscheme@file]
+    Secure_30000003:
+      entryPoints: [websecure]
+      rule: Host(`secure.example.test`)
+      service: Secure_30000003
+      tls: {}
+      middlewares: [sys-hsts@file, Secure_30000003-basicauth]
+  services:
+    Secure_30000003:
+      loadBalancer:
+        servers:
+          - url: http://127.0.0.1:18080
+  middlewares:
+    Secure_30000003-basicauth:
+      basicAuth:
+        # Synthetic fixture credentials: test / password. Never use in production.
+        users: ["test:{SHA}W6ph5Mm5Pz8GgiULbPgzG37mj9g="]
+        realm: Fixture
+        removeHeader: true

@@ -1,0 +1,31 @@
+[
+  {
+    "file": "Plain_10000001.yaml",
+    "domain": "plain.example.test"
+  },
+  {
+    "file": "Headers_20000002.yaml",
+    "domain": "headers.example.test"
+  },
+  {
+    "file": "Secure_30000003.yaml",
+    "domain": "secure.example.test",
+    "https": true,
+    "forcetls": true,
+    "hsts": true,
+    "basicAuthUser": "test"
+  },
+  {
+    "file": "Forward_40000004.yaml",
+    "domain": "forward.example.test",
+    "forwardauth": true
+  },
+  {
+    "file": "Multiple_50000005.yaml",
+    "domain": "multiple.example.test",
+    "backends": [
+      "http://127.0.0.1:18080",
+      "http://127.0.0.1:18082"
+    ]
+  }
+]

@@ -36,8 +36,11 @@ func (m *ConfigManager) Add(u *UserInput) (*Config, error) {
 	return c, nil
 }
 
-//Update must search a config by hash, delete it and write the new config to file
+// Update must search a config by hash, delete it and write the new config to file
 func (m *ConfigManager) Update(u *UserInput) (*Config, error) {
+	if !u.Validate().Valid {
+		return nil, fmt.Errorf("invalid userinput")
+	}
 	if err := m.Delete(u.ID); err != nil {
 		return nil, err
 	}
@@ -109,7 +112,9 @@ func (m *ConfigManager) SetCertResolver(r string) error {
 		return err
 	}
 	for _, c := range cl {
-		c.Load()
+		if err := c.Load(); err != nil {
+			return err
+		}
 		for k, e := range c.HTTP.Routers {
 			if e.TLS != nil {
 				c.HTTP.Routers[k].TLS.CertResolver = r
@@ -153,6 +158,9 @@ func (m *ConfigManager) MigrateConfig() error {
 		id := c.ID()
 		p := strings.Split(id, "_")
 		if len(p) < 2 {
+			if err := c.Load(); err != nil {
+				return err
+			}
 			nn := id + "_" + RandHash()
 			c.ChangeIdentifier(id, nn)
 			k := strings.Split(c.Path, string(os.PathSeparator))

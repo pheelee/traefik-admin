@@ -73,9 +73,19 @@ var defaults = {
   }
 }
 
-var app = new Vue({
-    el: '#app',
-    data: {
+function openDialog(id) {
+  const dialog = document.getElementById(id);
+  dialog.showModal();
+  const tabs = dialog.querySelector('.tabs');
+  if (tabs) {
+    const firstId = tabs.querySelector('a').hash.slice(1);
+    M.Tabs.getInstance(tabs).select(firstId);
+  }
+}
+
+var app = Vue.createApp({
+    render: TraefikAdminRender,
+    data: function() { return {
       features: {
         forwardauth: {
           enabled: false,
@@ -97,24 +107,27 @@ var app = new Vue({
       validation: JSON.parse(JSON.stringify(defaults.validation)),
       editor: JSON.parse(JSON.stringify(defaults.editor)),
       editorMode: 'Create',
-    },
+    } },
     methods: {
+        openEditor: function() {
+          openDialog('editModal');
+        },
         send: function(senderId){
           let tabs = document.querySelector("#editModal .tabs");
           var firstId = tabs.querySelectorAll("a")[0].href.split("#")[1];
           (M.Tabs.getInstance(tabs)).select(firstId);
-          if(app.editor.id === '') {app.editor.id=app.editor.name}
             var method = 'POST';
             if(app.editorMode === 'Update'){
               method = 'PUT';
             }
-            ajax('config/'+app.editor.id,method,app.editor, function(data){
+            var configId = method === 'POST' ? 'new' : app.editor.id;
+            ajax('config/'+encodeURIComponent(configId),method,app.editor, function(data){
                 let config = JSON.parse(data)
                 if (app.editorMode === 'Create') 
                   app.connections.push(config);
                 if (app.editorMode === 'Update')
                   app.connections[app.connections.findIndex(el => el.id === app.editor.id)] = config;
-                M.Modal.getInstance(document.getElementById(senderId)).close();
+                document.getElementById(senderId).close();
                 app.applyFilter();
                 Notify.Success(app.editor.name, "successfully " + app.editorMode.toLowerCase() + "d")
             }, function(response){
@@ -136,13 +149,13 @@ var app = new Vue({
               Notify.Success(name, "config deleted")
             })
           };
-          M.Modal.init(document.getElementById("confirmModal"), {}).open();
+          openDialog('confirmModal');
         },
         edit: function(event){
           var id = event.target.dataset["id"];
           app.editorMode = 'Update';
-          app.editor = Object.assign({},app.filter_view[id]);
-          M.Modal.getInstance(document.getElementById('editModal')).open();
+          app.editor = JSON.parse(JSON.stringify(app.filter_view[id]));
+          openDialog('editModal');
         },
         applyFilter: function(){
           let filter = app.filter_string.toLowerCase();
@@ -152,7 +165,7 @@ var app = new Vue({
             );
         },
     }
-  })
+  }).mount('#app')
 
 
   var Notify = {
@@ -166,7 +179,7 @@ var app = new Vue({
       this._fire(sender,msg)
     },
     _fire: function(sender, msg, color=''){
-      M.toast({html: "<b>"+sender+"</b>&nbsp;<p>"+msg+"</p>", classes:color})
+      new M.Toast({text: sender + ' ' + msg, classes:color})
     }
   }
 
@@ -182,8 +195,8 @@ var app = new Vue({
 
   document.addEventListener('DOMContentLoaded', function() {
 
-    M.Modal.init(document.querySelectorAll('.modal'), {
-      onCloseEnd: function(el) {
+    document.getElementById('editModal').addEventListener('close', function(event) {
+        const el = event.currentTarget;
         app.editor = JSON.parse(JSON.stringify(defaults.editor));
         app.editorMode = 'Create';
         app.validation = JSON.parse(JSON.stringify(defaults.validation));
@@ -193,12 +206,23 @@ var app = new Vue({
         el.querySelectorAll("label").forEach((i) => {
           i.classList.remove("active");
         })
-      },
-      onOpenEnd: function(el) {
-        let tabs = el.querySelector(".tabs");
-        var firstId = tabs.querySelectorAll("a")[0].href.split("#")[1];
-        (M.Tabs.getInstance(tabs)).select(firstId);
+    });
+    document.addEventListener('click', function(event) {
+      const close = event.target.closest('.modal-close');
+      if (close) {
+        event.preventDefault();
+        close.closest('dialog').close();
       }
+    });
+    document.querySelectorAll('dialog.modal').forEach(function(dialog) {
+      dialog.addEventListener('click', function(event) {
+        const bounds = dialog.getBoundingClientRect();
+        if (event.target === dialog &&
+            (event.clientX < bounds.left || event.clientX > bounds.right ||
+             event.clientY < bounds.top || event.clientY > bounds.bottom)) {
+          dialog.close();
+        }
+      });
     });
     M.Tabs.init(document.querySelectorAll(".tabs"), {});
     ajax('config/','GET',null, function(data){

@@ -8,6 +8,22 @@
   --alt-accent-color:#E1D8A2;
 }
 
+.material-icons {
+  font-family: 'Material Icons';
+  font-weight: normal;
+  font-style: normal;
+  font-size: 24px;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  font-feature-settings: 'liga';
+  -webkit-font-smoothing: antialiased;
+}
+
 body {
   display: flex;
   min-height: 100vh;
@@ -137,4 +153,48 @@ input {
   vertical-align: top;
   height:24px;
   width:48px;
+}
+/* Preserve the classic Materialize appearance with native dialog behavior. */
+.switch label input[type=checkbox]:checked + .lever {
+  background-color: #80cbc4;
+}
+
+dialog.modal {
+  border: 0;
+  color: var(--text-color);
+}
+
+dialog.modal[open] {
+  display: flex;
+  flex-direction: column;
+  margin: 0 auto;
+}
+
+dialog.modal::backdrop {
+  background-color: rgba(0, 0, 0, 0.5);
+}
+
+dialog.modal .modal-content {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+dialog.modal .modal-footer {
+  flex-shrink: 0;
+}
+
+#confirmModal[open] {
+  height: auto;
+  min-height: 14rem;
+}
+
+@media (max-width: 600px) {
+  #editModal .tabs .tab a {
+    padding: 0 0.5rem;
+    font-size: 0.8rem;
+  }
+  #confirmModal {
+    width: 90%;
+  }
 }

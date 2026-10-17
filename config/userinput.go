@@ -7,6 +7,9 @@ import (
 	"time"
 )
 
+// MaxBackends limits non-empty backend URLs submitted through the editor or API.
+const MaxBackends = 5
+
 // UserInput hold the data submitted by the api request
 type UserInput struct {
 	ID            string           `json:"id"`
@@ -42,7 +45,7 @@ type Validation struct {
 	Errors ValidationError `json:"errors"`
 }
 
-//ValidationError provides information about invalid fields
+// ValidationError provides information about invalid fields
 type ValidationError struct {
 	Name      string      `json:"name"`
 	Domain    string      `json:"domain"`
@@ -87,7 +90,7 @@ func NewValidation() Validation {
 		Valid: true,
 		Errors: ValidationError{
 			Name: "", Domain: "",
-			Backends:  make([]string, 5),
+			Backends:  make([]string, MaxBackends),
 			BasicAuth: make([]basicAuth, 5),
 			AllowedIP: allowedIP{NoProxies: "", IP: make([]string, 5)},
 			Headers:   make([]header, 5),
@@ -115,21 +118,23 @@ func (u *UserInput) Validate() Validation {
 
 	// ToDo: improve validation (regarding ip addresses)
 	backendRegex := `^http(s)?:\/\/[a-zA-Z0-9.]+:\d{0,5}$`
-	atLeastOne := false
+	v.Errors.Backends = make([]string, max(MaxBackends, len(u.Backends)))
+	count := 0
 	for i, b := range u.Backends {
 		if b.URL == "" {
 			continue
 		}
-		atLeastOne = true
-		if i >= len(v.Errors.Backends) {
-			break
-		}
+		count++
 		if match, _ = regexp.MatchString(backendRegex, b.URL); !match {
 			v.Valid = false
 			v.Errors.Backends[i] = "Format: http://192.168.1.12:5000"
 		}
 	}
-	if !atLeastOne {
+	if count > MaxBackends {
+		v.Valid = false
+		v.Errors.Backends[0] = "At most five backend URLs are supported"
+	}
+	if count == 0 {
 		v.Valid = false
 		v.Errors.Backends[0] = "At least one backend URL is required"
 	}

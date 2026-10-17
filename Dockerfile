@@ -1,5 +1,5 @@
 ARG BUILD_FROM
-FROM golang:1.25-alpine as builder
+FROM golang:1.26.0-alpine as builder
 ARG BUILD_ARCH
 
 COPY . /go/src/traefik-admin
@@ -18,7 +18,8 @@ RUN set -ex; \
         CGO_ENABLED=0 GOOS=linux GOARCH=$GOARCH GOARM=$GOARM go build -a -ldflags "-X github.com/pheelee/traefik-admin/internal/server.VERSION=`git describe --tags`" -o dist/traefik-admin ./cmd/traefik-admin
 
 FROM $BUILD_FROM
-ARG TRAEFIK_VERSION=2.11.8
+# renovate: datasource=github-releases depName=traefik/traefik
+ARG TRAEFIK_VERSION=3.7.15
 
 LABEL org.opencontainers.image.source=https://github.com/pheelee/traefik-admin
 LABEL org.opencontainers.image.licenses=MIT

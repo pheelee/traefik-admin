@@ -1,0 +1,5 @@
+http:
+  routers:
+    test:
+      rule: Host(`first.example.test`)
+      rule: Host(`second.example.test`)

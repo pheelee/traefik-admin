@@ -1,0 +1,74 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  GOTOOLCHAIN: local
+  GOFLAGS: -mod=readonly
+
+jobs:
+  test:
+    name: Tests and API smoke check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - run: npm run vendor:check
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+      - run: go mod download && go mod verify
+      - name: Require tidy Go module files
+        run: go mod tidy -diff
+      - run: go test -count=1 ./...
+      - name: Check configuration fixtures with the pinned Traefik release
+        run: bash scripts/test-traefik-fixtures.sh
+      - name: Package and smoke-test the release binary
+        env:
+          VERSION: v0.0.0-ci
+          DIST_DIR: ${{ runner.temp }}/release
+        run: |
+          ./build.sh --amd64
+          mkdir "$RUNNER_TEMP/smoke"
+          tar -xzf "$DIST_DIR/traefik-admin-linux-amd64.tar.gz" -C "$RUNNER_TEMP/smoke"
+          python3 scripts/smoke-test.py "$RUNNER_TEMP/smoke/traefik-admin" --expected-version "$VERSION"
+      - name: Install Chromium for browser checks
+        run: npx playwright install --with-deps chromium
+      - name: Check the Vue UI in Chromium
+        env:
+          TRAEFIK_ADMIN_BINARY: ${{ runner.temp }}/smoke/traefik-admin
+        run: npm run test:browser
+
+  build:
+    name: Build ${{ matrix.arch }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [amd64, arm64, armv7]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+      - name: Cross-compile and verify the release archive
+        env:
+          VERSION: v0.0.0-ci
+          DIST_DIR: ${{ runner.temp }}/release
+          BUILD_ARCH: ${{ matrix.arch }}
+        run: ./build.sh "--$BUILD_ARCH"

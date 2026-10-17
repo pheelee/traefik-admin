@@ -1,0 +1,12 @@
+http:
+  routers:
+    Forward_40000004-http:
+      entryPoints: [web]
+      rule: Host(`forward.example.test`)
+      service: Forward_40000004
+      middlewares: [sys-forwardauth@file]
+  services:
+    Forward_40000004:
+      loadBalancer:
+        servers:
+          - url: http://127.0.0.1:18080
