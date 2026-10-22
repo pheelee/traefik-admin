@@ -16,5 +16,5 @@ require (
 require (
 	github.com/felixge/httpsnoop v1.1.0 // indirect
 	github.com/gorilla/securecookie v1.1.2 // indirect
-	golang.org/x/net v0.60.0 // indirect
+	golang.org/x/net v0.61.0 // indirect
 )
