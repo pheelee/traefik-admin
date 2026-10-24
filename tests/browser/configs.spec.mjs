@@ -30,7 +30,8 @@ test("manage proxy entries with Vue 3 under the application CSP", async ({ page,
   await expect(editor.locator("#name")).toHaveClass(/invalid/);
   await editor.locator("#name").fill("BrowserTest");
   await editor.locator("#domain").fill("browser.example.com");
-  await editor.locator("#backend").fill(baseURL);
+  await editor.locator("#backend0").fill(baseURL)
+  await editor.locator("#backend1").fill(baseURL.replace("127.0.0.1", "localhost"));
   await editor.locator("label").filter({ hasText: "Forward http to https" }).click();
   await editor.locator("label").filter({ hasText: "SSL/TLS" }).click();
   await editor.getByRole("link", { name: "Headers", exact: true }).click();
@@ -44,6 +45,8 @@ test("manage proxy entries with Vue 3 under the application CSP", async ({ page,
 
   await cards.getByRole("link", { name: "Edit", exact: true }).click();
   await expect(editor.locator("#domain")).toHaveValue("browser.example.com");
+  await expect(editor.locator("#backend0")).toHaveValue(baseURL);
+  await expect(editor.locator("#backend1")).toHaveValue(baseURL.replace("127.0.0.1", "localhost"));
   await editor.locator("#domain").fill("updated.example.com");
   await editor.getByRole("link", { name: "Update", exact: true }).click();
   await expect(editor).toBeHidden();
@@ -55,7 +58,7 @@ test("manage proxy entries with Vue 3 under the application CSP", async ({ page,
   await filter.fill("does-not-exist");
   await filter.press("Enter");
   await expect(cards).toHaveCount(0);
-  await filter.fill("BrowserTest");
+  await filter.fill("localhost");
   await filter.press("Enter");
   await expect(cards).toHaveCount(1);
 
@@ -64,8 +67,31 @@ test("manage proxy entries with Vue 3 under the application CSP", async ({ page,
   } });
   const [stored] = await configs.json();
   expect(stored.domain).toBe("updated.example.com");
-  expect(stored.backend.healthy).toBe(true);
+  expect(stored.backends.filter(b => b.url)).toEqual([
+    { url: baseURL, healthy: true },
+    { url: baseURL.replace("127.0.0.1", "localhost"), healthy: true },
+  ]);
   expect(stored.headers).toContainEqual({ Name: "X-Browser-Test", Value: "Vue3" });
+
+  // Closing an unsaved edit must not mutate the displayed backend list.
+  await cards.getByRole("link", { name: "Edit", exact: true }).click();
+  await editor.locator("#backend0").fill("http://127.0.0.1:1234");
+  await editor.getByRole("link", { name: "Close", exact: true }).click();
+  await expect(cards.locator(".green-text").first()).toContainText(baseURL);
+
+  // Remove one backend, then verify both persisted data and the card after reload.
+  await cards.getByRole("link", { name: "Edit", exact: true }).click();
+  await editor.locator("#backend1").fill("");
+  await editor.getByRole("link", { name: "Update", exact: true }).click();
+  await expect(editor).toBeHidden();
+  await filter.fill("BrowserTest");
+  await filter.press("Enter");
+  await expect(cards).toHaveCount(1);
+  await page.reload();
+  await expect(cards.locator(".green-text")).toHaveCount(1);
+  await cards.getByRole("link", { name: "Edit", exact: true }).click();
+  await expect(editor.locator("#backend1")).toHaveValue("");
+  await editor.getByRole("link", { name: "Close", exact: true }).click();
 
   await cards.getByRole("link", { name: "Remove", exact: true }).click();
   await page.locator("#confirmModal").getByRole("link", { name: "No", exact: true }).click();

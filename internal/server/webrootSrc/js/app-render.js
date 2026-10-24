@@ -97,12 +97,15 @@ return function render(_ctx, _cache) {
                       _createTextVNode(_toDisplayString(con.https ? 'https://' : 'http://') + _toDisplayString(con.domain), 1 /* TEXT */)
                     ], 8 /* PROPS */, ["href"])
                   ]),
-                  _createElementVNode("p", {
-                    class: _normalizeClass({'green-text': con.backend.healthy, 'red-text': !con.backend.healthy})
-                  }, [
-                    _createElementVNode("i", { class: "material-icons" }, _toDisplayString(con.backend.healthy ? 'arrow_upward' : 'arrow_downward'), 1 /* TEXT */),
-                    _createTextVNode(_toDisplayString(con.backend.url), 1 /* TEXT */)
-                  ], 2 /* CLASS */)
+                  (_openBlock(true), _createElementBlock(_Fragment, null, _renderList(con.backends.filter(b => b.url), (b, backendIndex) => {
+                    return (_openBlock(), _createElementBlock("p", {
+                      key: backendIndex,
+                      class: _normalizeClass({'green-text': b.healthy, 'red-text': !b.healthy})
+                    }, [
+                      _createElementVNode("i", { class: "material-icons" }, _toDisplayString(b.healthy ? 'arrow_upward' : 'arrow_downward'), 1 /* TEXT */),
+                      _createTextVNode(_toDisplayString(b.url), 1 /* TEXT */)
+                    ], 2 /* CLASS */))
+                  }), 128 /* KEYED_FRAGMENT */))
                 ]),
                 _createElementVNode("div", { class: "card-action" }, [
                   _createElementVNode("a", {
@@ -194,25 +197,30 @@ return function render(_ctx, _cache) {
                         "data-error": _ctx.validation.errors.domain
                       }, null, 8 /* PROPS */, ["data-error"])
                     ]),
-                    _createElementVNode("div", { class: "input-field col s12 m6" }, [
-                      _withDirectives(_createElementVNode("input", {
-                        id: "backend",
-                        type: "text",
-                        autocomplete: "off",
-                        class: _normalizeClass(["validate", {invalid: _ctx.validation.errors.backend != ''}]),
-                        "onUpdate:modelValue": $event => ((_ctx.editor.backend.url) = $event)
-                      }, null, 10 /* CLASS, PROPS */, ["onUpdate:modelValue"]), [
-                        [_vModelText, _ctx.editor.backend.url]
-                      ]),
-                      _createElementVNode("label", {
-                        for: "backend",
-                        class: _normalizeClass({active: _ctx.editorMode=='Update'})
-                      }, "Backend", 2 /* CLASS */),
-                      _createElementVNode("span", {
-                        class: "helper-text",
-                        "data-error": _ctx.validation.errors.backend
-                      }, null, 8 /* PROPS */, ["data-error"])
-                    ])
+                    (_openBlock(true), _createElementBlock(_Fragment, null, _renderList(_ctx.editor.backends, (b, index) => {
+                      return (_openBlock(), _createElementBlock("div", {
+                        class: "input-field col s12 m6",
+                        key: index
+                      }, [
+                        _withDirectives(_createElementVNode("input", {
+                          id: 'backend'+index,
+                          type: "text",
+                          autocomplete: "off",
+                          class: _normalizeClass(["validate", {invalid: !!_ctx.validation.errors.backends[index]}]),
+                          "onUpdate:modelValue": $event => ((b.url) = $event)
+                        }, null, 10 /* CLASS, PROPS */, ["id", "onUpdate:modelValue"]), [
+                          [_vModelText, b.url]
+                        ]),
+                        _createElementVNode("label", {
+                          for: 'backend'+index,
+                          class: _normalizeClass({active: _ctx.editorMode=='Update' || b.url != ''})
+                        }, "Backend " + _toDisplayString(index + 1), 11 /* TEXT, CLASS, PROPS */, ["for"]),
+                        _createElementVNode("span", {
+                          class: "helper-text",
+                          "data-error": _ctx.validation.errors.backends[index]
+                        }, null, 8 /* PROPS */, ["data-error"])
+                      ]))
+                    }), 128 /* KEYED_FRAGMENT */))
                   ]),
                   _createElementVNode("div", { class: "row z-depth-1" }, [
                     _createElementVNode("div", { class: "section-title" }, "Encryption"),

@@ -7,12 +7,15 @@ import (
 	"time"
 )
 
+// MaxBackends limits non-empty backend URLs submitted through the editor or API.
+const MaxBackends = 5
+
 // UserInput hold the data submitted by the api request
 type UserInput struct {
 	ID            string           `json:"id"`
 	Name          string           `json:"name"`
 	Domain        string           `json:"domain"`
-	Backend       Backend          `json:"backend"`
+	Backends      []Backend        `json:"backends"`
 	ForwardAuth   bool             `json:"forwardauth"`
 	HTTPS         bool             `json:"https"`
 	ForceTLS      bool             `json:"forcetls"`
@@ -42,11 +45,11 @@ type Validation struct {
 	Errors ValidationError `json:"errors"`
 }
 
-//ValidationError provides information about invalid fields
+// ValidationError provides information about invalid fields
 type ValidationError struct {
 	Name      string      `json:"name"`
 	Domain    string      `json:"domain"`
-	Backend   string      `json:"backend"`
+	Backends  []string    `json:"backends"`
 	BasicAuth []basicAuth `json:"basicauth"`
 	AllowedIP allowedIP   `json:"allowedip"`
 	Headers   []header    `json:"headers"`
@@ -86,7 +89,8 @@ func NewValidation() Validation {
 	return Validation{
 		Valid: true,
 		Errors: ValidationError{
-			Name: "", Domain: "", Backend: "",
+			Name: "", Domain: "",
+			Backends:  make([]string, MaxBackends),
 			BasicAuth: make([]basicAuth, 5),
 			AllowedIP: allowedIP{NoProxies: "", IP: make([]string, 5)},
 			Headers:   make([]header, 5),
@@ -113,9 +117,26 @@ func (u *UserInput) Validate() Validation {
 	}
 
 	// ToDo: improve validation (regarding ip addresses)
-	if match, _ = regexp.MatchString("^http(s)?:\\/\\/[a-zA-Z0-9.]+:\\d{0,5}$", u.Backend.URL); !match {
+	backendRegex := `^http(s)?:\/\/[a-zA-Z0-9.]+:\d{0,5}$`
+	v.Errors.Backends = make([]string, max(MaxBackends, len(u.Backends)))
+	count := 0
+	for i, b := range u.Backends {
+		if b.URL == "" {
+			continue
+		}
+		count++
+		if match, _ = regexp.MatchString(backendRegex, b.URL); !match {
+			v.Valid = false
+			v.Errors.Backends[i] = "Format: http://192.168.1.12:5000"
+		}
+	}
+	if count > MaxBackends {
 		v.Valid = false
-		v.Errors.Backend = "Format: http://192.168.1.12:5000"
+		v.Errors.Backends[0] = "At most five backend URLs are supported"
+	}
+	if count == 0 {
+		v.Valid = false
+		v.Errors.Backends[0] = "At least one backend URL is required"
 	}
 
 	rex = regexp.MustCompile("^[a-zA-Z0-9]{3,32}$")

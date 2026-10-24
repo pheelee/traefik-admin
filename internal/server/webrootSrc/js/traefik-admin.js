@@ -18,7 +18,13 @@ var defaults = {
     id: '',
     name: '',
     domain: '',
-    backend: {url: '', healthy: true},
+    backends: [
+      {url: '', healthy: true},
+      {url: '', healthy: true},
+      {url: '', healthy: true},
+      {url: '', healthy: true},
+      {url: '', healthy: true},
+    ],
     forwardauth: false,
     https: true,
     forcetls: true,
@@ -44,7 +50,7 @@ var defaults = {
     errors: {
       name: '',
       domain: '',
-      backend: '',
+      backends: ['','','','',''],
       basicauth: [
         {username:'',password:''},
         {username:'',password:''},
@@ -148,13 +154,14 @@ var app = Vue.createApp({
         edit: function(event){
           var id = event.target.dataset["id"];
           app.editorMode = 'Update';
-          app.editor = Object.assign({},app.filter_view[id]);
+          app.editor = JSON.parse(JSON.stringify(app.filter_view[id]));
           openDialog('editModal');
         },
         applyFilter: function(){
           let filter = app.filter_string.toLowerCase();
           app.filter_view = app.connections.filter(c => 
-            c.domain.toLowerCase().includes(filter) || c.name.toLowerCase().includes(filter) || c.backend.url.toLowerCase().includes(filter)
+            c.domain.toLowerCase().includes(filter) || c.name.toLowerCase().includes(filter) ||
+            c.backends.some(b => b.url && b.url.toLowerCase().includes(filter))
             );
         },
     }
