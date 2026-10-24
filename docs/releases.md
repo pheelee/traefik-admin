@@ -35,6 +35,16 @@ directory for release preparation.
 
 ## Publish a release
 
+During development, releases stay on `0.x`: breaking changes and new features
+advance the minor version (for example, `0.5.3` to `0.6.0`); compatible fixes and
+maintenance advance the patch version. Keep Conventional Commit `!` and
+`BREAKING CHANGE` markers and explain migrations in release notes. A minor bump
+before `1.0.0` can require changes from users or API clients.
+
+The workflow takes its version from the tag chosen by the maintainer; it does
+not calculate a major bump from commit messages. Adopting `1.0.0` is a deliberate
+maintainer decision, rather than an automatic consequence of a breaking change.
+
 Merge the reviewed changes into `main`, then push a new tag such as `v0.5.3` or
 `v0.5.3-beta.1`. The tag must point to a commit reachable from `main`. The release
 workflow validates frontend assets, dependencies, and tests, builds all three
