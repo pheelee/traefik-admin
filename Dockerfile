@@ -1,5 +1,5 @@
 ARG BUILD_FROM
-FROM golang:1.26.0-alpine as builder
+FROM golang:1.27.3-alpine as builder
 ARG BUILD_ARCH
 
 COPY . /go/src/traefik-admin
@@ -19,7 +19,7 @@ RUN set -ex; \
 
 FROM $BUILD_FROM
 # renovate: datasource=github-releases depName=traefik/traefik
-ARG TRAEFIK_VERSION=3.7.15
+ARG TRAEFIK_VERSION=3.7.16
 
 LABEL org.opencontainers.image.source=https://github.com/pheelee/traefik-admin
 LABEL org.opencontainers.image.licenses=MIT
