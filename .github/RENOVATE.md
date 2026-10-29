@@ -5,6 +5,11 @@ Run workflow** on `main`. It updates only this repository, using `renovate.json`
 Existing major-update approvals and merge policies remain in effect. Update
 commits use Conventional Commits.
 
+Ordinary dependency updates wait until a release is at least seven days old.
+Releases without a known timestamp are held back (`timestamp-required`). Review
+and expedite urgent security fixes when needed rather than relying on this
+waiting period as a security guarantee.
+
 Authentication follows [pheelee/cat](https://github.com/pheelee/cat/blob/main/.github/workflows/renovate.yml),
 using the `irbe-automation` GitHub App:
 
