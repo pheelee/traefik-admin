@@ -6,6 +6,8 @@
   ],
   "dependencyDashboard": true,
   "semanticCommits": "enabled",
+  "minimumReleaseAge": "7 days",
+  "minimumReleaseAgeBehaviour": "timestamp-required",
   "automerge": false,
   "postUpdateOptions": ["gomodTidy"],
   "customManagers": [
